@@ -92,6 +92,11 @@
   #btn-fire{position:absolute;right:28px;bottom:76px;width:92px;height:92px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff7680,#c40f1e);border:3px solid #ffb3ba;pointer-events:auto;
     display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 10px 26px rgba(232,33,47,.5)}
   #btn-dash{position:absolute;right:134px;bottom:52px;width:58px;height:58px;border-radius:50%;background:rgba(55,224,255,.22);border:2px solid rgba(55,224,255,.6);pointer-events:auto;display:flex;align-items:center;justify-content:center;font-size:24px}
+  #btn-autoaim{position:absolute;top:138px;right:12px;pointer-events:auto;cursor:pointer;background:var(--panel);border:1px solid var(--gold);color:var(--gold);font-weight:800;font-size:12.5px;padding:8px 13px;border-radius:99px;letter-spacing:.04em;z-index:6}
+  #btn-autoaim.off{border-color:var(--line);color:#8fa0d8}
+  #lock-label{position:absolute;left:50%;top:calc(50% + 32px);transform:translateX(-50%);font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--gold);text-shadow:0 1px 6px #000;display:none;white-space:nowrap}
+  #lock-label.on{display:block}
+  #crosshair.locked::before,#crosshair.locked::after{background:var(--gold);box-shadow:0 0 9px var(--gold)}
   #btn-pause{position:fixed;top:86px;right:12px;z-index:7;width:42px;height:42px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:#fff;font-size:17px;display:none;pointer-events:auto;cursor:pointer}
   #btn-pause.on{display:block}
   @media (max-width:640px){ #hint{display:none} #wave-panel{display:none} }
@@ -113,6 +118,8 @@
   </div>
   <div id="combo">x2 COMBO</div>
   <div id="crosshair"></div>
+  <div id="lock-label">🎯 ĐANG KHÓA MỤC TIÊU</div>
+  <button id="btn-autoaim">🎯 TÂM TỰ ĐỘNG: BẬT</button>
   <div id="hitmarker"></div>
   <div id="vignette"></div>
   <div id="wave-banner"><div class="big" id="banner-big">WAVE 1</div><div class="small" id="banner-small">Tiêu diệt toàn bộ robot địch</div></div>
@@ -141,6 +148,7 @@
   <h1 class="title">K TEAM<br><em>ROBOT ARENA 3D</em></h1>
   <p class="tagline">Đàn robot nổi loạn đã chiếm đấu trường! Điều khiển <b>Rubi</b> — robot đỏ tươi của K Team — sống sót qua từng đợt tấn công, hạ <b>Boss mỗi 5 wave</b> và leo kỷ lục điểm.</p>
   <button class="btn" id="btn-start">▶ Vào đấu trường</button>
+  <button class="btn ghost" id="btn-autoaim-menu" style="margin-top:12px">🎯 Tâm bắn tự động: BẬT</button>
   <div id="best-line"></div>
   <div class="controls">
     <div class="ctl"><b>W A S D</b>Di chuyển</div>
@@ -203,7 +211,7 @@ scene.fog = new THREE.Fog(0x070a1c, 55, 130);
 
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 400);
 camera.position.set(0, 9, 14);
-if (IS_TOUCH) { camera.fov = 70; camera.updateProjectionMatrix(); }
+camera.fov = IS_TOUCH ? 85 : 78; camera.updateProjectionMatrix();
 
 const hemi = new THREE.HemisphereLight(0x8fb7ff, 0x241016, 1.3);
 scene.add(hemi);
@@ -488,7 +496,7 @@ const state = {
   mode: 'menu', // menu | playing | upgrade | paused | over
   score: 0, best: +(localStorage.getItem('kteam-best') || 0),
   wave: 0, kills: 0, combo: 0, comboTimer: 0, multiplier: 1,
-  shake: 0, time: 0, spawnQueue: [], spawnTimer: 0, waveActive: false,
+  shake: 0, time: 0, spawnQueue: [], spawnTimer: 0, waveActive: false, autoAim: localStorage.getItem('kteam-autoaim') !== '0', lockTarget: null,
 };
 const player = {
   mesh: makeRubi(), hp: 100, maxHp: 100,
@@ -515,7 +523,7 @@ const viewModel = new THREE.Group();
   viewModel.userData.muzzle = muzzle; viewModel.userData.flash = flash;
   viewModel.position.set(0.36, -0.33, -0.7);
   viewModel.rotation.y = -0.04;
-  viewModel.scale.setScalar(0.85);
+  viewModel.scale.setScalar(0.92);
   viewModel.visible = false;
   viewModel.traverse(o => { o.castShadow = false; o.receiveShadow = false; });
 }
@@ -528,7 +536,7 @@ let bossRef = null;
 // camera orbit
 let camYaw = Math.PI, camPitch = 0.34;
 function lerpAngle(a, b, t) { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return a + d * t; }
-let touchManualUntil = -1;
+let touchManualUntil = -1, manualLookUntil = -1;
 // input
 const keys = {};
 let firing = false, pointerLocked = false;
@@ -536,6 +544,7 @@ addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'KeyP' || e.code === 'Escape') { if (state.mode === 'playing') pauseGame(); else if (state.mode === 'paused') resumeGame(); }
   if (state.mode === 'upgrade' && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) pickUpgrade(+e.code.slice(-1) - 1);
+  if (e.code === 'KeyT') toggleAutoAim();
 });
 addEventListener('keyup', e => keys[e.code] = false);
 canvas.addEventListener('mousedown', e => { if (state.mode === 'playing') { firing = true; if (!IS_TOUCH && !pointerLocked) canvas.requestPointerLock(); } });
@@ -545,6 +554,7 @@ addEventListener('mousemove', e => {
   if (!pointerLocked || state.mode !== 'playing') return;
   camYaw -= e.movementX * 0.0026;
   camPitch = THREE.MathUtils.clamp(camPitch + e.movementY * 0.0022, 0.06, 1.05);
+  manualLookUntil = state.time + 1.2; // người chơi tự ngắm -> tâm tự động tạm nhường
 });
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
@@ -579,6 +589,28 @@ if (IS_TOUCH) {
   $('btn-fire').addEventListener('touchend', () => touchFiring = false);
   $('btn-dash').addEventListener('touchstart', e => { e.preventDefault(); tryDash(); }, { passive: false });
 }
+
+// ---------- Tâm bắn tự động (auto-aim mode) ----------
+const ENEMY_NAMES = { chaser: 'CHASER', scout: 'SCOUT', tank: 'TANK', boss: 'BOSS TITAN' };
+function setLockUI(e) {
+  $('crosshair').classList.toggle('locked', !!e);
+  const l = $('lock-label');
+  if (e) { l.textContent = '🎯 ĐANG KHÓA: ' + (ENEMY_NAMES[e.type] || 'ĐỊCH'); l.classList.add('on'); } else l.classList.remove('on');
+}
+function refreshAutoUI() {
+  const on = state.autoAim;
+  $('btn-autoaim').textContent = on ? '🎯 TÂM TỰ ĐỘNG: BẬT' : '🎯 TÂM TỰ ĐỘNG: TẮT';
+  $('btn-autoaim').classList.toggle('off', !on);
+  $('btn-autoaim-menu').textContent = on ? '🎯 Tâm bắn tự động: BẬT' : '🎯 Tâm bắn tự động: TẮT';
+}
+function toggleAutoAim() {
+  state.autoAim = !state.autoAim;
+  localStorage.setItem('kteam-autoaim', state.autoAim ? '1' : '0');
+  if (!state.autoAim) { state.lockTarget = null; setLockUI(null); }
+  refreshAutoUI(); SFX.upgrade();
+}
+$('btn-autoaim').addEventListener('click', toggleAutoAim);
+$('btn-autoaim-menu').addEventListener('click', toggleAutoAim);
 
 // ---------- Waves ----------
 function waveComp(n) {
@@ -628,6 +660,7 @@ const UPGRADES = [
 ];
 function heal(n) { player.hp = Math.min(player.maxHp, player.hp + n); }
 function offerUpgrades() {
+  setLockUI(null); state.lockTarget = null;
   state.mode = 'upgrade';
   const pool = [...UPGRADES].sort(() => Math.random() - 0.5).slice(0, 3);
   offerUpgrades._pool = pool;
@@ -661,6 +694,7 @@ function damageEnemy(e, dmg, hitPos) {
   if (e.hp <= 0) killEnemy(e);
 }
 function killEnemy(e) {
+  if (state.lockTarget === e) { state.lockTarget = null; setLockUI(null); }
   const idx = enemies.indexOf(e); if (idx < 0) return;
   enemies.splice(idx, 1);
   burst(e.mesh.position.clone().setY(1.4), e.type === 'boss' ? 0xff2d78 : 0xffa502, e.type === 'boss' ? 60 : 20, e.type === 'boss' ? 10 : 7, 0.8, 1.2);
@@ -711,7 +745,7 @@ function startGame() {
   for (const b of bullets) scene.remove(b.m); bullets.length = 0;
   for (const b of enemyBullets) scene.remove(b.m); enemyBullets.length = 0;
   for (const p of pickups) scene.remove(p.mesh); pickups.length = 0;
-  bossRef = null; $('boss-wrap').classList.remove('on');
+  bossRef = null; $('boss-wrap').classList.remove('on'); state.lockTarget = null; setLockUI(null);
   Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 0, comboTimer: 0, multiplier: 1, shake: 0, spawnQueue: [], waveActive: false });
   Object.assign(player, { hp: 100, maxHp: 100, speed: 7.2, dmg: 12, fireRate: 0.16, fireTimer: 0, dashCd: 0, dashTime: 0, invuln: 0, alive: true, dashRate: 1 });
   player.mesh.visible = false; viewModel.visible = true; viewModel.position.set(0.36, -0.33, -0.7); viewModel.rotation.set(0, -0.04, 0); player.mesh.position.set(0, 0, 6); camYaw = Math.PI; camPitch = IS_TOUCH ? 0.52 : 0.34;
@@ -734,7 +768,7 @@ function gameOver() {
     $('gameover').classList.remove('hidden'); $('touch').classList.remove('on');
   }, 900);
 }
-function pauseGame() { if (state.mode !== 'playing') return; state.mode = 'paused'; $('pause-screen').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
+function pauseGame() { if (state.mode !== 'playing') return; setLockUI(null); state.mode = 'paused'; $('pause-screen').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
 function resumeGame() { if (state.mode !== 'paused') return; state.mode = 'playing'; $('pause-screen').classList.add('hidden'); }
 function toMenu() {
   state.mode = 'menu';
@@ -743,6 +777,7 @@ function toMenu() {
   $('menu').classList.remove('hidden');
   viewModel.visible = false;
   $('best-line').textContent = state.best ? `🏆 Kỷ lục của bạn: ${state.best.toLocaleString('vi-VN')} điểm` : '';
+refreshAutoUI();
   player.mesh.visible = true;
 }
 $('btn-start').addEventListener('click', startGame);
@@ -763,6 +798,24 @@ function animate() {
   const t = state.time;
 
   if (state.mode === 'playing') {
+    // --- tâm bắn tự động: camera tự bám địch gần nhất (ngang + ngẩng), nhường khi người chơi tự ngắm ---
+    if (state.autoAim && state.time > Math.max(manualLookUntil, touchManualUntil)) {
+      if (!state.lockTarget || !enemies.includes(state.lockTarget) || state.lockTarget.mesh.position.distanceTo(player.mesh.position) > 46) {
+        let nd = 46; state.lockTarget = null;
+        for (const e of enemies) { const d = e.mesh.position.distanceTo(player.mesh.position); if (d < nd) { nd = d; state.lockTarget = e; } }
+      }
+      const lt = state.lockTarget;
+      if (lt) {
+        const dx = lt.mesh.position.x - player.mesh.position.x, dz = lt.mesh.position.z - player.mesh.position.z;
+        const dist = Math.max(2, Math.hypot(dx, dz));
+        const desiredYaw = Math.atan2(-dx, -dz);
+        const desiredPitch = THREE.MathUtils.clamp(0.34 - Math.atan2(1.3 * lt.mesh.scale.y - 2.95, dist), 0.05, 1.02);
+        const rate = (firing || touchFiring || AUTOTEST) ? 9 : 4.5;
+        camYaw = lerpAngle(camYaw, desiredYaw, Math.min(1, dt * rate));
+        camPitch += (desiredPitch - camPitch) * Math.min(1, dt * 6);
+        setLockUI(lt);
+      } else setLockUI(null);
+    } else if (!state.autoAim) setLockUI(null);
     // --- spawn ---
     if (state.spawnQueue.length) {
       state.spawnTimer -= dt;
@@ -949,7 +1002,7 @@ function animate() {
     camera.lookAt(pp.x - Math.sin(camYaw) * cp, eyeY + Math.sin(lookPitch), pp.z - Math.cos(camYaw) * cp);
     leanCur += ((state.mode === 'playing' ? -curIx * 0.028 : 0) - leanCur) * Math.min(1, dt * 8);
     camera.rotateZ(leanCur + shX * 0.012);
-    const baseFov = IS_TOUCH ? 70 : 62;
+    const baseFov = IS_TOUCH ? 85 : 78;
     const targetFov = player.dashTime > 0 ? baseFov + 7 : baseFov;
     if (Math.abs(camera.fov - targetFov) > 0.1) { camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); }
     if (state.mode === 'over' && viewModel.visible) { // gục ngã: súng rơi xuống

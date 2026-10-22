@@ -37,6 +37,7 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 | `Shift` | Dash — lướt né đòn, bất tử trong chớp mắt |
 | `P` / `Esc` | Tạm dừng |
 | `1` `2` `3` | Chọn nâng cấp giữa wave |
+| `T` / nút 🎯 trên HUD | Bật/tắt **chế độ tâm bắn tự động**: tâm tự bám theo địch gần nhất (cả hướng ngang + độ ngẩng), tâm chuyển vàng + hiện nhãn ĐANG KHÓA khi bám; tự ngắm bằng chuột/vuốt thì chế độ tạm nhường rồi bám lại |
 | 📱 Mobile | Joystick trái di chuyển — **camera tự bám theo hướng chạy**, giữ nút 🔥 bắn thì **Rubi tự quay mặt về địch gần nhất + đạn tự khóa mục tiêu**, 💨 dash; vuốt màn hình chỉ khi muốn tự chỉnh camera |
 
 ## Gameplay
