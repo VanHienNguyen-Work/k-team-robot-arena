@@ -4,6 +4,11 @@ Game 3D arena shooter chạy ngay trên trình duyệt: điều khiển **Rubi**
 
 ![genre](https://img.shields.io/badge/genre-3D%20arena%20shooter-e8212f) ![tech](https://img.shields.io/badge/tech-Three.js%20%2B%20WebGL-37e0ff) ![build](https://img.shields.io/badge/build-kh%C3%B4ng%20c%E1%BA%A7n-ffc21c)
 
+## Hình ảnh thực tế (chụp từ bản chạy thật)
+
+![Menu chính](screenshots/menu.png)
+![Gameplay — Rubi giữa đấu trường, HUD, combo](screenshots/gameplay.png)
+
 ## Chơi ngay
 
 Không cần cài đặt, không cần build — chỉ cần một static server:
