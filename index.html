@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>K TEAM — Robot Arena 3D | Rubi</title>
+<meta name="description" content="Game 3D arena shooter: điều khiển robot Rubi của K Team, sống sót qua từng wave địch và hạ boss.">
+<style>
+  :root{
+    --red:#e8212f; --red-dark:#8f0f1a; --gold:#ffc21c; --cyan:#37e0ff;
+    --ink:#0b0e1a; --panel:rgba(10,13,28,.82); --line:rgba(255,255,255,.14);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;height:100%;overflow:hidden;background:#05060d;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:#fff}
+  #game-canvas{position:fixed;inset:0;display:block}
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:5}
+  #hud.on{display:block}
+  .topbar{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px;backdrop-filter:blur(6px)}
+  #hp-wrap{width:min(300px,42vw)}
+  #hp-label{display:flex;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ffb3ba}
+  #hp-bar{height:14px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden;margin-top:5px}
+  #hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#ff3b47,#ff7a45);border-radius:99px;transition:width .18s ease}
+  #dash-row{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:11px;color:#9be9ff;font-weight:700;letter-spacing:.06em}
+  #dash-bar{flex:1;height:6px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden}
+  #dash-fill{height:100%;width:100%;background:var(--cyan)}
+  #stats-panel{text-align:right;font-weight:800;line-height:1.25}
+  #stats-panel .score{font-size:22px;color:var(--gold)}
+  #stats-panel .sub{font-size:12px;color:#c9d4ff;font-weight:600}
+  #wave-panel{text-align:center}
+  #wave-panel .wave{font-size:20px;font-weight:900;letter-spacing:.06em}
+  #wave-panel .left{font-size:12px;color:#ffb3ba;font-weight:700}
+  #combo{position:absolute;top:122px;left:16px;font-size:30px;font-weight:900;color:var(--gold);text-shadow:0 3px 14px rgba(255,160,0,.55);opacity:0;transform:scale(.8);transition:all .15s}
+  #combo.on{opacity:1;transform:scale(1)}
+  #crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:26px;height:26px;opacity:.95}
+  #crosshair::before,#crosshair::after{content:"";position:absolute;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+  #crosshair::before{left:50%;top:0;width:2px;height:100%;transform:translateX(-50%);clip-path:polygon(0 0,100% 0,100% 32%,0 32%,0 68%,100% 68%,100% 100%,0 100%)}
+  #crosshair::after{top:50%;left:0;height:2px;width:100%;transform:translateY(-50%);clip-path:polygon(0 0,32% 0,32% 100%,0 100%,68% 0,100% 0,100% 100%,68% 100%)}
+  #hitmarker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(45deg);width:18px;height:18px;border:3px solid #fff;opacity:0}
+  #hitmarker.on{opacity:1;transition:none}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(255,0,20,.45) 100%);opacity:0;transition:opacity .12s}
+  #wave-banner{position:absolute;left:50%;top:26%;transform:translate(-50%,-50%) scale(.8);text-align:center;opacity:0;transition:all .3s;pointer-events:none}
+  #wave-banner.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  #wave-banner .big{font-size:clamp(34px,7vw,64px);font-weight:900;letter-spacing:.04em;color:#fff;text-shadow:0 0 26px rgba(232,33,47,.9),0 4px 0 var(--red-dark)}
+  #wave-banner .small{font-size:clamp(13px,2.4vw,18px);color:var(--gold);font-weight:800;letter-spacing:.22em;text-transform:uppercase;margin-top:4px}
+  #boss-wrap{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);width:min(520px,84vw);display:none}
+  #boss-wrap.on{display:block}
+  #boss-name{text-align:center;font-size:13px;font-weight:900;letter-spacing:.2em;color:#ff8f98;margin-bottom:5px;text-shadow:0 2px 8px #000}
+  #boss-bar{height:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
+  #boss-fill{height:100%;width:100%;background:linear-gradient(90deg,#a100ff,#ff2d78)}
+  #hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:12.5px;color:rgba(255,255,255,.75);background:rgba(0,0,0,.35);padding:6px 14px;border-radius:99px;white-space:nowrap}
+  /* ---------- Screens ---------- */
+  .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;z-index:10;padding:20px;
+    background:radial-gradient(ellipse at 50% 120%,rgba(232,33,47,.35),transparent 60%),linear-gradient(180deg,rgba(4,6,16,.55),rgba(4,6,16,.88))}
+  .screen.hidden{display:none}
+  .logo-badge{width:92px;height:92px;border-radius:26px;background:linear-gradient(145deg,#ff4653,#a30d1a);display:flex;align-items:center;justify-content:center;
+    font-size:52px;font-weight:900;color:#fff;border:3px solid var(--gold);box-shadow:0 14px 40px rgba(232,33,47,.5);transform:rotate(-4deg)}
+  .logo-badge span{color:var(--gold);text-shadow:2px 3px 0 rgba(0,0,0,.35)}
+  h1.title{font-size:clamp(38px,8vw,72px);font-weight:900;letter-spacing:.02em;line-height:1.02;margin-top:18px;text-shadow:0 5px 0 var(--red-dark),0 12px 34px rgba(0,0,0,.6)}
+  h1.title em{font-style:normal;color:var(--red);-webkit-text-stroke:1px rgba(255,255,255,.35)}
+  .tagline{margin-top:10px;font-size:clamp(14px,2.6vw,18px);color:#dbe4ff;max-width:560px;line-height:1.5}
+  .tagline b{color:var(--gold)}
+  .btn{pointer-events:auto;cursor:pointer;margin-top:26px;background:linear-gradient(180deg,#ff4653,#c40f1e);color:#fff;border:2px solid #ffb3ba;
+    font-size:20px;font-weight:900;letter-spacing:.06em;padding:15px 46px;border-radius:99px;box-shadow:0 10px 30px rgba(232,33,47,.55);transition:transform .12s,box-shadow .12s;text-transform:uppercase}
+  .btn:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 16px 38px rgba(232,33,47,.7)}
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:rgba(255,255,255,.08);border-color:var(--line);box-shadow:none;font-size:15px;padding:11px 28px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:26px;max-width:640px}
+  .ctl{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:9px 13px;font-size:13px;color:#dbe4ff}
+  .ctl b{color:#fff;background:rgba(255,255,255,.16);border-radius:6px;padding:1px 7px;margin-right:6px;font-size:12px}
+  #best-line{margin-top:16px;font-size:14px;color:var(--gold);font-weight:800;letter-spacing:.05em}
+  #gameover-stats{margin-top:14px;font-size:17px;line-height:1.7;color:#dbe4ff}
+  #gameover-stats b{color:#fff;font-size:21px}
+  /* ---------- Upgrade ---------- */
+  #upgrade{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(3,5,12,.72);padding:18px}
+  #upgrade.on{display:flex}
+  #upgrade h2{font-size:clamp(24px,5vw,38px);font-weight:900;letter-spacing:.03em}
+  #upgrade p{color:#c9d4ff;margin-top:6px;font-size:15px}
+  #upgrade-cards{display:flex;gap:14px;margin-top:24px;flex-wrap:wrap;justify-content:center}
+  .card{pointer-events:auto;cursor:pointer;width:200px;background:linear-gradient(170deg,rgba(38,44,80,.95),rgba(14,17,36,.95));border:2px solid var(--line);border-radius:18px;padding:20px 16px;text-align:center;transition:all .13s}
+  .card:hover{border-color:var(--gold);transform:translateY(-5px);box-shadow:0 16px 34px rgba(0,0,0,.5)}
+  .card .icon{font-size:40px}
+  .card .name{font-size:17px;font-weight:900;margin-top:9px}
+  .card .desc{font-size:13px;color:#b9c6f5;margin-top:6px;line-height:1.45}
+  .card .key{margin-top:11px;font-size:11px;color:#8fa0d8;font-weight:800;letter-spacing:.1em}
+  /* ---------- Touch controls ---------- */
+  #touch{position:fixed;inset:0;z-index:6;pointer-events:none;display:none}
+  #touch.on{display:block}
+  #stick{position:absolute;left:26px;bottom:64px;width:124px;height:124px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.22);pointer-events:auto}
+  #stick-knob{position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.35);border:2px solid rgba(255,255,255,.5);transform:translate(-50%,-50%)}
+  #btn-fire{position:absolute;right:28px;bottom:76px;width:92px;height:92px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff7680,#c40f1e);border:3px solid #ffb3ba;pointer-events:auto;
+    display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 10px 26px rgba(232,33,47,.5)}
+  #btn-dash{position:absolute;right:134px;bottom:52px;width:58px;height:58px;border-radius:50%;background:rgba(55,224,255,.22);border:2px solid rgba(55,224,255,.6);pointer-events:auto;display:flex;align-items:center;justify-content:center;font-size:24px}
+  #btn-pause{position:fixed;top:86px;right:12px;z-index:7;width:42px;height:42px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:#fff;font-size:17px;display:none;pointer-events:auto;cursor:pointer}
+  #btn-pause.on{display:block}
+  @media (max-width:640px){ #hint{display:none} #wave-panel{display:none} }
+</style>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="topbar">
+    <div class="panel" id="hp-wrap">
+      <div id="hp-label"><span>🤖 RUBI — HP</span><span id="hp-text">100/100</span></div>
+      <div id="hp-bar"><div id="hp-fill"></div></div>
+      <div id="dash-row"><span>DASH</span><div id="dash-bar"><div id="dash-fill"></div></div><span style="color:#7d8fc9">SHIFT</span></div>
+    </div>
+    <div class="panel" id="wave-panel"><div class="wave" id="wave-text">WAVE 1</div><div class="left" id="left-text">Địch còn: 0</div></div>
+    <div class="panel" id="stats-panel"><div class="score" id="score-text">0</div><div class="sub" id="best-text">Kỷ lục: 0</div></div>
+  </div>
+  <div id="combo">x2 COMBO</div>
+  <div id="crosshair"></div>
+  <div id="hitmarker"></div>
+  <div id="vignette"></div>
+  <div id="wave-banner"><div class="big" id="banner-big">WAVE 1</div><div class="small" id="banner-small">Tiêu diệt toàn bộ robot địch</div></div>
+  <div id="boss-wrap"><div id="boss-name">⚠ BOSS — TITAN NỔI LOẠN ⚠</div><div id="boss-bar"><div id="boss-fill"></div></div></div>
+  <div id="hint">WASD di chuyển · Chuột ngắm · Giữ chuột trái bắn · SHIFT dash · P tạm dừng · Click vào game để khoá chuột</div>
+</div>
+<button id="btn-pause">⏸</button>
+
+<!-- Touch -->
+<div id="touch">
+  <div id="stick"><div id="stick-knob"></div></div>
+  <div id="btn-dash">💨</div>
+  <div id="btn-fire">🔥</div>
+</div>
+
+<!-- Upgrade -->
+<div id="upgrade">
+  <h2>⬆ WAVE HOÀN THÀNH!</h2>
+  <p>Chọn 1 nâng cấp cho Rubi trước wave tiếp theo</p>
+  <div id="upgrade-cards"></div>
+</div>
+
+<!-- Menu -->
+<div class="screen" id="menu">
+  <div class="logo-badge"><span>K</span></div>
+  <h1 class="title">K TEAM<br><em>ROBOT ARENA 3D</em></h1>
+  <p class="tagline">Đàn robot nổi loạn đã chiếm đấu trường! Điều khiển <b>Rubi</b> — robot đỏ tươi của K Team — sống sót qua từng đợt tấn công, hạ <b>Boss mỗi 5 wave</b> và leo kỷ lục điểm.</p>
+  <button class="btn" id="btn-start">▶ Vào đấu trường</button>
+  <div id="best-line"></div>
+  <div class="controls">
+    <div class="ctl"><b>W A S D</b>Di chuyển</div>
+    <div class="ctl"><b>Chuột</b>Xoay camera / ngắm</div>
+    <div class="ctl"><b>Chuột trái</b>Bắn (giữ)</div>
+    <div class="ctl"><b>Shift</b>Dash lướt né đòn</div>
+    <div class="ctl"><b>P</b>Tạm dừng</div>
+    <div class="ctl"><b>📱 Mobile</b>Joystick + nút bắn</div>
+  </div>
+</div>
+
+<!-- Game over -->
+<div class="screen hidden" id="gameover">
+  <div class="logo-badge" style="filter:grayscale(.4)"><span>K</span></div>
+  <h1 class="title">RUBI <em>NGÃ XUỐNG!</em></h1>
+  <div id="gameover-stats"></div>
+  <button class="btn" id="btn-restart">↻ Chơi lại</button>
+  <button class="btn ghost" id="btn-tomenu">Về menu</button>
+</div>
+
+<!-- Pause -->
+<div class="screen hidden" id="pause-screen">
+  <h1 class="title" style="font-size:44px">TẠM <em>DỪNG</em></h1>
+  <button class="btn" id="btn-resume">▶ Tiếp tục</button>
+  <button class="btn ghost" id="btn-quit">Thoát về menu</button>
+</div>
+
+<div id="autotest-result" style="display:none"></div>
+
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.min.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   K TEAM — ROBOT ARENA 3D
+   Rubi (robot đỏ tươi của K Team) vs đàn robot nổi loạn.
+   Third-person arena shooter — Three.js, không cần build.
+   ============================================================ */
+
+const ARENA_R = 38;
+const AUTOTEST = new URLSearchParams(location.search).has('autotest');
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+
+// ---------- Renderer / Scene ----------
+const canvas = document.getElementById('game-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.3;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070a1c);
+scene.fog = new THREE.Fog(0x070a1c, 55, 130);
+
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 400);
+camera.position.set(0, 9, 14);
+
+const hemi = new THREE.HemisphereLight(0x8fb7ff, 0x241016, 1.3);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2d9, 2.15);
+sun.position.set(24, 38, 14);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -48; sun.shadow.camera.right = 48;
+sun.shadow.camera.top = 48; sun.shadow.camera.bottom = -48;
+sun.shadow.camera.far = 120;
+scene.add(sun);
+const rim = new THREE.PointLight(0xe8212f, 60, 90, 1.6);
+rim.position.set(0, 10, -30);
+scene.add(rim);
+
+// ---------- Audio (WebAudio synth, không cần file) ----------
+let AC = null;
+function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+function beep(freq, dur, type = 'square', vol = 0.12, slide = 0) {
+  const ac = audio(); if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, ac.currentTime);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), ac.currentTime + dur);
+  g.gain.setValueAtTime(vol, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+  o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
+}
+function noiseBurst(dur = 0.25, vol = 0.22) {
+  const ac = audio(); if (!ac) return;
+  const len = Math.floor(ac.sampleRate * dur), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = ac.createBufferSource(); src.buffer = buf;
+  const g = ac.createGain(); g.gain.value = vol;
+  const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+  src.connect(f).connect(g).connect(ac.destination); src.start();
+}
+const SFX = {
+  shoot() { beep(720 + Math.random() * 120, 0.07, 'square', 0.05, -420); },
+  enemyShoot() { beep(240, 0.12, 'sawtooth', 0.06, -120); },
+  hit() { beep(190, 0.05, 'square', 0.07, -60); },
+  boom() { noiseBurst(0.3, 0.25); beep(90, 0.3, 'sine', 0.22, -50); },
+  bigBoom() { noiseBurst(0.7, 0.4); beep(60, 0.7, 'sine', 0.3, -30); },
+  hurt() { beep(140, 0.16, 'sawtooth', 0.13, -70); },
+  dash() { noiseBurst(0.12, 0.08); beep(500, 0.12, 'sine', 0.05, 500); },
+  pickup() { beep(660, 0.09, 'sine', 0.12); setTimeout(() => beep(990, 0.12, 'sine', 0.12), 70); },
+  wave() { beep(392, 0.14, 'square', 0.1); setTimeout(() => beep(523, 0.14, 'square', 0.1), 120); setTimeout(() => beep(784, 0.24, 'square', 0.12), 240); },
+  upgrade() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 0.13, 'triangle', 0.12), i * 80)); },
+  over() { [440, 349, 262, 196].forEach((f, i) => setTimeout(() => beep(f, 0.25, 'triangle', 0.13), i * 180)); },
+};
+
+// ---------- Materials helpers ----------
+const M = {
+  red: new THREE.MeshStandardMaterial({ color: 0xe8212f, roughness: 0.35, metalness: 0.35 }),
+  redDark: new THREE.MeshStandardMaterial({ color: 0x8f0f1a, roughness: 0.45, metalness: 0.3 }),
+  white: new THREE.MeshStandardMaterial({ color: 0xf5f7ff, roughness: 0.3, metalness: 0.15 }),
+  black: new THREE.MeshStandardMaterial({ color: 0x14161f, roughness: 0.5, metalness: 0.5 }),
+  gold: new THREE.MeshStandardMaterial({ color: 0xffc21c, roughness: 0.25, metalness: 0.75, emissive: 0x442c00 }),
+  gun: new THREE.MeshStandardMaterial({ color: 0x2a2e3f, roughness: 0.35, metalness: 0.7 }),
+  glowYellow: new THREE.MeshBasicMaterial({ color: 0xffd94d }),
+  glowCyan: new THREE.MeshBasicMaterial({ color: 0x37e0ff }),
+  glowRed: new THREE.MeshBasicMaterial({ color: 0xff4757 }),
+};
+function box(w, h, d, mat, x = 0, y = 0, z = 0, shadow = true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z); if (shadow) { m.castShadow = true; m.receiveShadow = true; }
+  return m;
+}
+function cyl(rt, rb, h, mat, x = 0, y = 0, z = 0, seg = 20) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function sph(r, mat, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 16), mat);
+  m.position.set(x, y, z); m.castShadow = true;
+  return m;
+}
+// Canvas texture: ngực Rubi có chữ K + tia sét vàng (logo K Team)
+function chestTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f5f7ff'; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = '#e8212f'; g.font = '900 150px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('K', 118, 138);
+  g.fillStyle = '#ffc21c'; g.strokeStyle = '#a86e00'; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(176, 42); g.lineTo(128, 140); g.lineTo(164, 140); g.lineTo(140, 222); g.lineTo(206, 112); g.lineTo(170, 112); g.closePath(); g.fill(); g.stroke();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// ---------- Arena ----------
+const obstacles = []; // {x,z,hx,hz}
+{
+  const floor = cyl(ARENA_R + 2, ARENA_R + 2, 0.6, new THREE.MeshStandardMaterial({ color: 0x2a3358, roughness: 0.85, metalness: 0.2 }), 0, -0.3, 0, 56);
+  floor.castShadow = false; scene.add(floor);
+  const grid = new THREE.PolarGridHelper(ARENA_R, 12, 8, 56, 0x37406e, 0x252c4e);
+  grid.position.y = 0.02; grid.material.transparent = true; grid.material.opacity = 0.55; scene.add(grid);
+  const ringGlow = new THREE.Mesh(new THREE.TorusGeometry(ARENA_R, 0.22, 10, 80), new THREE.MeshBasicMaterial({ color: 0xe8212f }));
+  ringGlow.rotation.x = Math.PI / 2; ringGlow.position.y = 0.35; scene.add(ringGlow);
+  // tường năng lượng
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(ARENA_R + 0.4, ARENA_R + 0.4, 5, 56, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0x37e0ff, transparent: true, opacity: 0.07, side: THREE.DoubleSide }));
+  wall.position.y = 2.5; scene.add(wall);
+  // cột đèn quanh sân
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const x = Math.cos(a) * (ARENA_R + 1.6), z = Math.sin(a) * (ARENA_R + 1.6);
+    const pole = cyl(0.16, 0.22, 7, M.gun, x, 3.5, z, 10); scene.add(pole);
+    scene.add(sph(0.42, i % 2 ? M.glowCyan : M.glowYellow, x, 7.2, z));
+    const pl = new THREE.PointLight(i % 2 ? 0x37e0ff : 0xffc21c, 12, 20, 1.8); pl.position.set(x, 7.2, z); scene.add(pl);
+  }
+  // vật cản (thùng hàng)
+  const spots = [[-13, -9], [13, -11], [-15, 10], [15, 11], [0, -19], [-7, 19], [8, 18], [0, 7], [-21, -1], [21, 0]];
+  for (const [x, z] of spots) {
+    const s = 2.6 + Math.random() * 1.2;
+    const crate = box(s, s, s, new THREE.MeshStandardMaterial({ color: 0x525f96, roughness: 0.6, metalness: 0.3 }), x, s / 2, z);
+    crate.rotation.y = Math.random() * 0.7 - 0.35; scene.add(crate);
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(s * 0.99, 0.14, s * 0.99), new THREE.MeshBasicMaterial({ color: 0x2fb9dd }));
+    edge.position.set(x, s + 0.02, z); edge.rotation.y = crate.rotation.y; scene.add(edge);
+    obstacles.push({ x, z, hx: s * 0.72, hz: s * 0.72, h: s });
+  }
+  // sao nền
+  const starGeo = new THREE.BufferGeometry(); const pts = [];
+  for (let i = 0; i < 700; i++) { const a = Math.random() * Math.PI * 2, r = 90 + Math.random() * 160, y = 18 + Math.random() * 110; pts.push(Math.cos(a) * r, y, Math.sin(a) * r); }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xaFC4ff, size: 0.9, sizeAttenuation: true })));
+}
+function collideObstacles(pos, radius) {
+  for (const o of obstacles) {
+    const dx = pos.x - o.x, dz = pos.z - o.z;
+    const px = o.hx + radius - Math.abs(dx), pz = o.hz + radius - Math.abs(dz);
+    if (px > 0 && pz > 0) { if (px < pz) pos.x = o.x + Math.sign(dx || 1) * (o.hx + radius); else pos.z = o.z + Math.sign(dz || 1) * (o.hz + radius); }
+  }
+  const d = Math.hypot(pos.x, pos.z), max = ARENA_R - radius;
+  if (d > max) { pos.x *= max / d; pos.z *= max / d; }
+}
+
+// ---------- RUBI (player) ----------
+function makeRubi() {
+  const g = new THREE.Group();
+  const legL = box(0.42, 0.85, 0.5, M.redDark, -0.32, 0.55, 0);
+  const legR = box(0.42, 0.85, 0.5, M.redDark, 0.32, 0.55, 0);
+  g.add(legL, legR);
+  g.add(box(0.55, 0.22, 0.78, M.black, -0.32, 0.11, 0.08));
+  g.add(box(0.55, 0.22, 0.78, M.black, 0.32, 0.11, 0.08));
+  const body = box(1.5, 1.25, 0.95, M.red, 0, 1.62, 0); g.add(body);
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.98, 0.08), new THREE.MeshStandardMaterial({ map: chestTexture(), roughness: 0.35 }));
+  chest.position.set(0, 1.66, 0.5); g.add(chest);
+  const backPlate = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.98, 0.08), new THREE.MeshStandardMaterial({ map: chestTexture(), roughness: 0.35 }));
+  backPlate.position.set(0, 1.66, -0.5); backPlate.rotation.y = Math.PI; g.add(backPlate);
+  g.add(box(1.56, 0.2, 1.0, M.gold, 0, 2.3, 0)); // quai vai vàng
+  // tay trái
+  const armL = new THREE.Group(); armL.position.set(-0.95, 2.12, 0);
+  armL.add(sph(0.3, M.gold, 0, 0, 0)); armL.add(box(0.34, 0.95, 0.34, M.red, 0, -0.55, 0)); armL.add(sph(0.2, M.white, 0, -1.08, 0));
+  g.add(armL);
+  // tay phải + súng
+  const armR = new THREE.Group(); armR.position.set(0.95, 2.12, 0);
+  armR.add(sph(0.3, M.gold, 0, 0, 0)); armR.add(box(0.34, 0.95, 0.34, M.red, 0, -0.55, 0));
+  const gun = new THREE.Group(); gun.position.set(0, -1.05, 0.1);
+  gun.add(box(0.26, 0.3, 1.05, M.gun, 0, 0, 0.35));
+  gun.add(cyl(0.09, 0.09, 0.55, M.black, 0, 0.05, 0.95, 12)).children;
+  gun.children[gun.children.length - 1].rotation.x = Math.PI / 2;
+  const tip = sph(0.11, M.glowYellow, 0, 0.05, 1.25); gun.add(tip);
+  armR.add(gun); g.add(armR);
+  // đầu: hộp đỏ, mặt đen, 1 mắt trắng lớn (dấu ấn Robo)
+  const head = new THREE.Group(); head.position.y = 3.05;
+  head.add(box(1.25, 1.05, 1.1, M.red, 0, 0, 0));
+  head.add(box(1.05, 0.78, 0.08, M.black, 0, -0.02, 0.56));
+  const eye = new THREE.Mesh(new THREE.CircleGeometry(0.27, 28), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  eye.position.set(0, 0.06, 0.61); head.add(eye);
+  const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.12, 20), new THREE.MeshBasicMaterial({ color: 0x12203a }));
+  pupil.position.set(0, 0.06, 0.62); head.add(pupil);
+  const mouth = box(0.4, 0.07, 0.02, M.glowYellow, 0, -0.3, 0.61, false); head.add(mouth);
+  head.add(cyl(0.05, 0.05, 0.62, M.black, 0.3, 0.8, 0, 8));
+  head.add(sph(0.13, M.glowYellow, 0.3, 1.14, 0));
+  g.add(head);
+  g.userData = { legL, legR, armL, armR, head, gunTip: tip };
+  return g;
+}
+
+// ---------- Enemy builders ----------
+const ENEMY_TYPES = {
+  chaser: { hp: 34, speed: 3.4, dmg: 10, score: 100, scale: 1.0, radius: 0.95, color: 0x7b2ff7, atkRange: 2.0 },
+  scout: { hp: 18, speed: 5.4, dmg: 6, score: 150, scale: 0.72, radius: 0.7, color: 0xff8c1a, atkRange: 1.6 },
+  tank: { hp: 130, speed: 1.8, dmg: 22, score: 300, scale: 1.65, radius: 1.5, color: 0x2f3542, atkRange: 2.6 },
+  boss: { hp: 720, speed: 1.5, dmg: 30, score: 2500, scale: 2.7, radius: 2.4, color: 0x3d0a4e, atkRange: 3.6 },
+};
+function makeEnemyMesh(type) {
+  const cfg = ENEMY_TYPES[type];
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: cfg.color, roughness: 0.4, metalness: 0.45 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x16181f, roughness: 0.5, metalness: 0.5 });
+  if (type === 'scout') {
+    g.add(cyl(0.16, 0.3, 0.5, dark, 0, 0.3, 0, 10));
+    g.add(box(1.0, 0.75, 0.85, bodyMat, 0, 0.95, 0));
+    const eye = sph(0.17, M.glowRed, 0, 1.0, 0.45); g.add(eye);
+    g.add(box(1.5, 0.08, 0.3, dark, 0, 1.42, 0)); // cánh
+  } else if (type === 'tank' || type === 'boss') {
+    g.add(box(1.7, 0.7, 1.3, dark, 0, 0.4, 0));
+    g.add(box(1.9, 1.3, 1.4, bodyMat, 0, 1.45, 0));
+    g.add(box(1.2, 0.85, 1.0, dark, 0, 2.5, 0));
+    const eye = box(0.85, 0.16, 0.06, M.glowRed, 0, 2.55, 0.52, false); g.add(eye);
+    g.add(box(0.35, 1.1, 0.35, bodyMat, -1.15, 1.5, 0));
+    g.add(box(0.35, 1.1, 0.35, bodyMat, 1.15, 1.5, 0));
+    if (type === 'boss') {
+      g.add(cyl(0.08, 0.08, 1.0, dark, -0.4, 3.4, 0, 8)); g.add(cyl(0.08, 0.08, 1.0, dark, 0.4, 3.4, 0, 8));
+      g.add(sph(0.16, M.glowRed, -0.4, 3.95, 0)); g.add(sph(0.16, M.glowRed, 0.4, 3.95, 0));
+      const core = sph(0.34, new THREE.MeshBasicMaterial({ color: 0xff2d78 }), 0, 1.45, 0.73); g.add(core);
+      g.userData.core = core;
+      // pháo vai
+      g.add(cyl(0.16, 0.16, 0.9, dark, -1.15, 2.25, 0.3, 10)).children;
+      g.children[g.children.length - 1].rotation.x = Math.PI / 2.4;
+      g.add(cyl(0.16, 0.16, 0.9, dark, 1.15, 2.25, 0.3, 10)).children;
+      g.children[g.children.length - 1].rotation.x = Math.PI / 2.4;
+    }
+  } else { // chaser
+    g.add(box(0.55, 0.8, 0.55, dark, -0.35, 0.4, 0));
+    g.add(box(0.55, 0.8, 0.55, dark, 0.35, 0.4, 0));
+    g.add(box(1.35, 1.1, 1.0, bodyMat, 0, 1.35, 0));
+    g.add(box(1.0, 0.7, 0.08, dark, 0, 2.2, 0.4));
+    const eye = sph(0.16, M.glowRed, 0, 2.22, 0.46); g.add(eye);
+    g.add(box(0.3, 0.85, 0.3, bodyMat, -0.85, 1.35, 0));
+    g.add(box(0.3, 0.85, 0.3, bodyMat, 0.85, 1.35, 0));
+    g.add(cyl(0.04, 0.04, 0.5, dark, 0, 2.85, 0, 8));
+    g.add(sph(0.09, M.glowRed, 0, 3.12, 0));
+  }
+  g.scale.setScalar(cfg.scale);
+  // thanh máu trên đầu
+  const bar = new THREE.Group();
+  const bg = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.2), new THREE.MeshBasicMaterial({ color: 0x22060a, side: THREE.DoubleSide, depthTest: false }));
+  const fg = new THREE.Mesh(new THREE.PlaneGeometry(1.62, 0.13), new THREE.MeshBasicMaterial({ color: 0x53ff7a, side: THREE.DoubleSide, depthTest: false }));
+  fg.position.z = 0.005; bar.add(bg, fg); bar.position.y = (type === 'boss' ? 3.6 : type === 'tank' ? 3.3 : 3.0);
+  bar.renderOrder = 99; fg.renderOrder = 100;
+  g.add(bar);
+  g.userData.bar = bar; g.userData.barFg = fg;
+  return g;
+}
+
+// ---------- Particles ----------
+const particles = [];
+const particleGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+function burst(pos, color, n = 10, speed = 6, life = 0.55, size = 1) {
+  for (let i = 0; i < n; i++) {
+    if (particles.length > 260) break;
+    const m = new THREE.Mesh(particleGeo, new THREE.MeshBasicMaterial({ color, transparent: true }));
+    m.position.copy(pos); m.scale.setScalar(size * (0.6 + Math.random() * 0.9));
+    scene.add(m);
+    particles.push({ m, vx: (Math.random() - 0.5) * speed * 2, vy: Math.random() * speed + 2, vz: (Math.random() - 0.5) * speed * 2, life, maxLife: life, spin: Math.random() * 9 });
+  }
+}
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.life -= dt;
+    if (p.life <= 0) { scene.remove(p.m); p.m.material.dispose(); particles.splice(i, 1); continue; }
+    p.vy -= 14 * dt;
+    p.m.position.x += p.vx * dt; p.m.position.y += p.vy * dt; p.m.position.z += p.vz * dt;
+    if (p.m.position.y < 0.1) { p.m.position.y = 0.1; p.vy *= -0.4; }
+    p.m.rotation.x += p.spin * dt; p.m.rotation.y += p.spin * 0.7 * dt;
+    p.m.material.opacity = p.life / p.maxLife;
+  }
+}
+
+// ---------- Bullets ----------
+const bullets = [], enemyBullets = [];
+const bulletGeo = new THREE.SphereGeometry(0.13, 10, 8);
+const eBulletGeo = new THREE.SphereGeometry(0.24, 12, 10);
+function spawnBullet(origin, dir, dmg) {
+  const m = new THREE.Mesh(bulletGeo, M.glowYellow);
+  m.position.copy(origin); scene.add(m);
+  const glow = new THREE.PointLight(0xffc21c, 5, 7, 2); m.add(glow);
+  bullets.push({ m, vx: dir.x * 46, vy: dir.y * 46, vz: dir.z * 46, life: 1.4, dmg });
+}
+function spawnEnemyBullet(origin, dir, dmg) {
+  const m = new THREE.Mesh(eBulletGeo, new THREE.MeshBasicMaterial({ color: 0xff2d78 }));
+  m.position.copy(origin); scene.add(m);
+  enemyBullets.push({ m, vx: dir.x * 19, vy: dir.y * 19, vz: dir.z * 19, life: 4, dmg });
+}
+
+// ---------- Game state ----------
+const $ = id => document.getElementById(id);
+const state = {
+  mode: 'menu', // menu | playing | upgrade | paused | over
+  score: 0, best: +(localStorage.getItem('kteam-best') || 0),
+  wave: 0, kills: 0, combo: 0, comboTimer: 0, multiplier: 1,
+  shake: 0, time: 0, spawnQueue: [], spawnTimer: 0, waveActive: false,
+};
+const player = {
+  mesh: makeRubi(), hp: 100, maxHp: 100,
+  speed: 7.2, dmg: 12, fireRate: 0.16, fireTimer: 0,
+  dashCd: 0, dashTime: 0, invuln: 0, walkPhase: 0, alive: true,
+};
+player.mesh.position.set(0, 0, 6);
+scene.add(player.mesh);
+const enemies = [], pickups = [];
+let bossRef = null;
+
+// camera orbit
+let camYaw = Math.PI, camPitch = 0.34;
+// input
+const keys = {};
+let firing = false, pointerLocked = false;
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyP' || e.code === 'Escape') { if (state.mode === 'playing') pauseGame(); else if (state.mode === 'paused') resumeGame(); }
+  if (state.mode === 'upgrade' && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) pickUpgrade(+e.code.slice(-1) - 1);
+});
+addEventListener('keyup', e => keys[e.code] = false);
+canvas.addEventListener('mousedown', e => { if (state.mode === 'playing') { firing = true; if (!IS_TOUCH && !pointerLocked) canvas.requestPointerLock(); } });
+addEventListener('mouseup', () => firing = false);
+document.addEventListener('pointerlockchange', () => { pointerLocked = document.pointerLockElement === canvas; });
+addEventListener('mousemove', e => {
+  if (!pointerLocked || state.mode !== 'playing') return;
+  camYaw -= e.movementX * 0.0026;
+  camPitch = THREE.MathUtils.clamp(camPitch + e.movementY * 0.0022, 0.06, 1.05);
+});
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+// ---------- Touch controls ----------
+const joy = { x: 0, y: 0, id: null };
+let touchFiring = false, touchLookId = null, lastLX = 0, lastLY = 0;
+if (IS_TOUCH) {
+  const stick = $('stick'), knob = $('stick-knob');
+  const setKnob = (dx, dy) => knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  stick.addEventListener('touchstart', e => { const t = e.changedTouches[0]; joy.id = t.identifier; }, { passive: true });
+  addEventListener('touchmove', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) {
+        const r = stick.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        let dx = t.clientX - cx, dy = t.clientY - cy; const d = Math.hypot(dx, dy), max = 44;
+        if (d > max) { dx *= max / d; dy *= max / d; }
+        joy.x = dx / max; joy.y = dy / max; setKnob(dx, dy);
+      } else if (t.identifier === touchLookId && state.mode === 'playing') {
+        camYaw -= (t.clientX - lastLX) * 0.006; camPitch = THREE.MathUtils.clamp(camPitch + (t.clientY - lastLY) * 0.005, 0.06, 1.05);
+        lastLX = t.clientX; lastLY = t.clientY;
+      }
+    }
+  }, { passive: true });
+  addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) { joy.id = null; joy.x = joy.y = 0; setKnob(0, 0); }
+      if (t.identifier === touchLookId) touchLookId = null;
+    }
+  });
+  canvas.addEventListener('touchstart', e => { const t = e.changedTouches[0]; touchLookId = t.identifier; lastLX = t.clientX; lastLY = t.clientY; }, { passive: true });
+  $('btn-fire').addEventListener('touchstart', e => { e.preventDefault(); touchFiring = true; }, { passive: false });
+  $('btn-fire').addEventListener('touchend', () => touchFiring = false);
+  $('btn-dash').addEventListener('touchstart', e => { e.preventDefault(); tryDash(); }, { passive: false });
+}
+
+// ---------- Waves ----------
+function waveComp(n) {
+  const list = [];
+  if (n % 5 === 0) { list.push('boss'); for (let i = 0; i < n; i++) list.push(i % 3 === 0 ? 'scout' : 'chaser'); return list; }
+  const count = 4 + n * 2;
+  for (let i = 0; i < count; i++) {
+    const r = Math.random();
+    if (n >= 3 && r < 0.16) list.push('tank');
+    else if (r < 0.45) list.push('scout');
+    else list.push('chaser');
+  }
+  return list;
+}
+function startWave(n) {
+  state.wave = n; state.spawnQueue = waveComp(n); state.spawnTimer = 0.5; state.waveActive = true;
+  showBanner('WAVE ' + n, n % 5 === 0 ? '⚠ BOSS ĐANG ĐẾN ⚠' : 'Tiêu diệt toàn bộ robot địch');
+  SFX.wave(); updateHUD();
+}
+function spawnEnemy(type) {
+  const cfg = ENEMY_TYPES[type];
+  const a = Math.random() * Math.PI * 2, r = ARENA_R - 4;
+  const mesh = makeEnemyMesh(type);
+  mesh.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+  scene.add(mesh);
+  burst(mesh.position.clone().setY(1.5), 0x37e0ff, 12, 5, 0.5);
+  const waveScale = 1 + (state.wave - 1) * 0.12;
+  const e = { mesh, type, hp: cfg.hp * waveScale, maxHp: cfg.hp * waveScale, speed: cfg.speed * (0.92 + Math.random() * 0.2), dmg: cfg.dmg, score: cfg.score, radius: cfg.radius, atkRange: cfg.atkRange, atkCd: 0, shootCd: 2 + Math.random() * 1.5, hitFlash: 0, wobble: Math.random() * 9 };
+  enemies.push(e);
+  if (type === 'boss') { bossRef = e; $('boss-wrap').classList.add('on'); $('boss-fill').style.width = '100%'; }
+  return e;
+}
+function showBanner(big, small) {
+  $('banner-big').textContent = big; $('banner-small').textContent = small;
+  const b = $('wave-banner'); b.classList.add('on');
+  clearTimeout(showBanner._t); showBanner._t = setTimeout(() => b.classList.remove('on'), 2100);
+}
+
+// ---------- Upgrades ----------
+const UPGRADES = [
+  { icon: '💥', name: 'Đạn Hạng Nặng', desc: '+30% sát thương mỗi phát bắn', apply() { player.dmg *= 1.3; } },
+  { icon: '⚡', name: 'Bắn Liên Thanh', desc: '+22% tốc độ bắn', apply() { player.fireRate *= 0.82; } },
+  { icon: '❤️', name: 'Khung Hợp Kim', desc: '+30 máu tối đa và hồi đầy 40 máu', apply() { player.maxHp += 30; heal(40); } },
+  { icon: '👟', name: 'Động Cơ Tia Lửa', desc: '+12% tốc độ chạy, dash hồi nhanh hơn 30%', apply() { player.speed *= 1.12; player.dashRate = (player.dashRate || 1) * 0.7; } },
+  { icon: '🎯', name: 'Đạn Xuyên Giáp', desc: '+18% sát thương, +10% tốc độ bắn', apply() { player.dmg *= 1.18; player.fireRate *= 0.9; } },
+  { icon: '🛡️', name: 'Lớp Giáp Rubi', desc: '+20 máu tối đa và hồi đầy máu', apply() { player.maxHp += 20; heal(player.maxHp); } },
+];
+function heal(n) { player.hp = Math.min(player.maxHp, player.hp + n); }
+function offerUpgrades() {
+  state.mode = 'upgrade';
+  const pool = [...UPGRADES].sort(() => Math.random() - 0.5).slice(0, 3);
+  offerUpgrades._pool = pool;
+  $('upgrade-cards').innerHTML = pool.map((u, i) => `<div class="card" data-i="${i}"><div class="icon">${u.icon}</div><div class="name">${u.name}</div><div class="desc">${u.desc}</div><div class="key">PHÍM ${i + 1} / CHẠM ĐỂ CHỌN</div></div>`).join('');
+  document.querySelectorAll('#upgrade-cards .card').forEach(c => c.addEventListener('click', () => pickUpgrade(+c.dataset.i)));
+  $('upgrade').classList.add('on');
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function pickUpgrade(i) {
+  const u = (offerUpgrades._pool || [])[i]; if (!u || state.mode !== 'upgrade') return;
+  u.apply(); SFX.upgrade();
+  $('upgrade').classList.remove('on');
+  state.mode = 'playing';
+  updateHUD();
+  startWave(state.wave + 1);
+}
+
+// ---------- Combat ----------
+function damagePlayer(n) {
+  if (player.invuln > 0 || !player.alive || state.mode !== 'playing') return;
+  player.hp -= n; state.shake = Math.min(0.7, state.shake + 0.32);
+  $('vignette').style.opacity = 1; setTimeout(() => $('vignette').style.opacity = 0, 130);
+  SFX.hurt(); updateHUD();
+  if (player.hp <= 0) { player.hp = 0; gameOver(); }
+}
+function damageEnemy(e, dmg, hitPos) {
+  e.hp -= dmg; e.hitFlash = 0.12;
+  burst(hitPos, 0xffd94d, 4, 4, 0.3, 0.7);
+  const hm = $('hitmarker'); hm.classList.add('on'); clearTimeout(hm._t); hm._t = setTimeout(() => hm.classList.remove('on'), 45);
+  SFX.hit();
+  if (e.hp <= 0) killEnemy(e);
+}
+function killEnemy(e) {
+  const idx = enemies.indexOf(e); if (idx < 0) return;
+  enemies.splice(idx, 1);
+  burst(e.mesh.position.clone().setY(1.4), e.type === 'boss' ? 0xff2d78 : 0xffa502, e.type === 'boss' ? 60 : 20, e.type === 'boss' ? 10 : 7, 0.8, 1.2);
+  burst(e.mesh.position.clone().setY(1.2), 0xffffff, 8, 5, 0.4, 0.8);
+  scene.remove(e.mesh);
+  if (e.type === 'boss') { SFX.bigBoom(); state.shake = 1; bossRef = null; $('boss-wrap').classList.remove('on'); }
+  else SFX.boom();
+  state.kills++;
+  state.combo++; state.comboTimer = 3;
+  state.multiplier = Math.min(5, 1 + Math.floor(state.combo / 4));
+  state.score += e.score * state.multiplier;
+  // rơi vật phẩm hồi máu 18%
+  if (Math.random() < 0.18 || e.type === 'boss') dropPickup(e.mesh.position);
+  updateHUD();
+}
+function dropPickup(pos) {
+  const g = new THREE.Group();
+  g.add(sph(0.34, new THREE.MeshBasicMaterial({ color: 0x2bff88 }), 0, 0, 0));
+  g.add(box(0.5, 0.16, 0.06, M.white, 0, 0, 0.3, false));
+  g.add(box(0.16, 0.5, 0.06, M.white, 0, 0, 0.3, false));
+  g.position.set(pos.x, 1, pos.z); scene.add(g);
+  pickups.push({ mesh: g, life: 14 });
+}
+function tryDash() {
+  if (state.mode !== 'playing' || player.dashCd > 0 || !player.alive) return;
+  player.dashTime = 0.22; player.invuln = Math.max(player.invuln, 0.3);
+  player.dashCd = 2.2 * (player.dashRate || 1);
+  SFX.dash();
+  burst(player.mesh.position.clone().setY(0.8), 0x37e0ff, 10, 4, 0.35, 0.8);
+}
+
+// ---------- HUD / flow ----------
+function updateHUD() {
+  $('hp-fill').style.width = Math.max(0, player.hp / player.maxHp * 100) + '%';
+  $('hp-text').textContent = `${Math.ceil(player.hp)}/${player.maxHp}`;
+  $('score-text').textContent = state.score.toLocaleString('vi-VN');
+  $('best-text').textContent = 'Kỷ lục: ' + Math.max(state.best, state.score).toLocaleString('vi-VN');
+  $('wave-text').textContent = 'WAVE ' + Math.max(1, state.wave);
+  $('left-text').textContent = 'Địch còn: ' + (enemies.length + state.spawnQueue.length);
+  const c = $('combo');
+  if (state.combo >= 2) { c.textContent = state.multiplier > 1 ? `x${state.multiplier} COMBO (${state.combo}) 🔥` : `${state.combo} COMBO 🔥`; c.classList.add('on'); } else c.classList.remove('on');
+  if (bossRef) $('boss-fill').style.width = Math.max(0, bossRef.hp / bossRef.maxHp * 100) + '%';
+}
+function startGame() {
+  audio();
+  // dọn dẹp
+  for (const e of enemies) scene.remove(e.mesh); enemies.length = 0;
+  for (const b of bullets) scene.remove(b.m); bullets.length = 0;
+  for (const b of enemyBullets) scene.remove(b.m); enemyBullets.length = 0;
+  for (const p of pickups) scene.remove(p.mesh); pickups.length = 0;
+  bossRef = null; $('boss-wrap').classList.remove('on');
+  Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 0, comboTimer: 0, multiplier: 1, shake: 0, spawnQueue: [], waveActive: false });
+  Object.assign(player, { hp: 100, maxHp: 100, speed: 7.2, dmg: 12, fireRate: 0.16, fireTimer: 0, dashCd: 0, dashTime: 0, invuln: 0, alive: true, dashRate: 1 });
+  player.mesh.visible = true; player.mesh.position.set(0, 0, 6); camYaw = Math.PI; camPitch = 0.34;
+  $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause-screen').classList.add('hidden');
+  $('hud').classList.add('on'); $('btn-pause').classList.add('on');
+  if (IS_TOUCH) $('touch').classList.add('on');
+  state.mode = 'playing';
+  updateHUD(); startWave(1);
+}
+function gameOver() {
+  player.alive = false; state.mode = 'over';
+  burst(player.mesh.position.clone().setY(1.5), 0xe8212f, 50, 9, 1, 1.3);
+  player.mesh.visible = false;
+  SFX.over(); state.shake = 1;
+  if (state.score > state.best) { state.best = state.score; localStorage.setItem('kteam-best', state.best); }
+  if (document.pointerLockElement) document.exitPointerLock();
+  setTimeout(() => {
+    $('gameover-stats').innerHTML = `Điểm: <b>${state.score.toLocaleString('vi-VN')}</b> · Kỷ lục: <b>${state.best.toLocaleString('vi-VN')}</b><br>Đạt wave: <b>${state.wave}</b> · Hạ: <b>${state.kills}</b> robot địch`;
+    $('gameover').classList.remove('hidden'); $('touch').classList.remove('on');
+  }, 900);
+}
+function pauseGame() { if (state.mode !== 'playing') return; state.mode = 'paused'; $('pause-screen').classList.remove('hidden'); if (document.pointerLockElement) document.exitPointerLock(); }
+function resumeGame() { if (state.mode !== 'paused') return; state.mode = 'playing'; $('pause-screen').classList.add('hidden'); }
+function toMenu() {
+  state.mode = 'menu';
+  $('pause-screen').classList.add('hidden'); $('gameover').classList.add('hidden'); $('hud').classList.remove('on');
+  $('touch').classList.remove('on'); $('btn-pause').classList.remove('on');
+  $('menu').classList.remove('hidden');
+  $('best-line').textContent = state.best ? `🏆 Kỷ lục của bạn: ${state.best.toLocaleString('vi-VN')} điểm` : '';
+  player.mesh.visible = true;
+}
+$('btn-start').addEventListener('click', startGame);
+$('btn-restart').addEventListener('click', startGame);
+$('btn-tomenu').addEventListener('click', toMenu);
+$('btn-resume').addEventListener('click', resumeGame);
+$('btn-quit').addEventListener('click', toMenu);
+$('btn-pause').addEventListener('click', () => state.mode === 'playing' ? pauseGame() : resumeGame());
+$('best-line').textContent = state.best ? `🏆 Kỷ lục của bạn: ${state.best.toLocaleString('vi-VN')} điểm` : '';
+
+// ---------- Main loop ----------
+const clock = new THREE.Clock();
+const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _dir = new THREE.Vector3();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  state.time += dt;
+  const t = state.time;
+
+  if (state.mode === 'playing') {
+    // --- spawn ---
+    if (state.spawnQueue.length) {
+      state.spawnTimer -= dt;
+      if (state.spawnTimer <= 0) { spawnEnemy(state.spawnQueue.shift()); state.spawnTimer = 0.75; updateHUD(); }
+    } else if (state.waveActive && enemies.length === 0) {
+      state.waveActive = false;
+      if (player.alive) offerUpgrades();
+    }
+    // --- combo timer ---
+    if (state.comboTimer > 0) { state.comboTimer -= dt; if (state.comboTimer <= 0) { state.combo = 0; state.multiplier = 1; updateHUD(); } }
+
+    // --- player movement (theo hướng camera) ---
+    const sin = Math.sin(camYaw), cos = Math.cos(camYaw);
+    let ix = 0, iz = 0;
+    if (keys.KeyW) iz += 1; if (keys.KeyS) iz -= 1; if (keys.KeyA) ix -= 1; if (keys.KeyD) ix += 1;
+    if (IS_TOUCH) { ix += joy.x; iz -= joy.y; }
+    if (AUTOTEST) { iz = 1; ix = Math.sin(t * 0.7) * 0.6; camYaw += dt * 0.45; }
+    const len = Math.hypot(ix, iz); if (len > 1) { ix /= len; iz /= len; }
+    const dashing = player.dashTime > 0;
+    const spd = player.speed * (dashing ? 2.6 : 1);
+    // forward của camera trên mặt đất: (-sin, -cos) khi yaw quay quanh Y
+    const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
+    const rx = Math.cos(camYaw), rz = -Math.sin(camYaw);
+    const mx = (fx * iz + rx * ix), mz = (fz * iz + rz * ix);
+    player.mesh.position.x += mx * spd * dt;
+    player.mesh.position.z += mz * spd * dt;
+    collideObstacles(player.mesh.position, 0.9);
+    player.mesh.rotation.y = camYaw + Math.PI;
+    const moving = len > 0.12;
+    player.walkPhase += dt * (moving ? spd * 1.6 : 0);
+    const u = player.mesh.userData;
+    const swing = moving ? Math.sin(player.walkPhase) * 0.55 : 0;
+    u.legL.rotation.x = swing; u.legR.rotation.x = -swing;
+    u.armL.rotation.x = -swing * 0.7;
+    player.mesh.position.y = moving ? Math.abs(Math.sin(player.walkPhase)) * 0.07 : Math.sin(t * 2) * 0.03;
+    // tay súng hướng theo camera pitch
+    u.armR.rotation.x = -(camPitch - 0.34) * 1.15 - 0.15;
+    u.head.rotation.x = (camPitch - 0.34) * 0.5;
+    if (keys.ShiftLeft || keys.ShiftRight) tryDash();
+    player.dashCd = Math.max(0, player.dashCd - dt);
+    player.dashTime = Math.max(0, player.dashTime - dt);
+    player.invuln = Math.max(0, player.invuln - dt);
+    $('dash-fill').style.width = (100 - player.dashCd / (2.2 * (player.dashRate || 1)) * 100) + '%';
+    player.mesh.traverse(o => { if (o.material === M.red) o.material.emissive = new THREE.Color(player.invuln > 0 ? 0x336677 : 0x000000); });
+
+    // --- bắn ---
+    player.fireTimer -= dt;
+    const wantFire = firing || touchFiring || AUTOTEST;
+    if (wantFire && player.fireTimer <= 0 && player.alive) {
+      player.fireTimer = player.fireRate;
+      // hướng bắn: theo hướng camera, nén trục Y để đạn bay ngang tầm robot địch
+      camera.getWorldDirection(_dir);
+      _dir.y = THREE.MathUtils.clamp(_dir.y * 0.35, -0.22, 0.22);
+      _dir.normalize();
+      // auto-aim nhẹ cho mobile / autotest: khóa địch gần trục ngắm nhất
+      if (IS_TOUCH || AUTOTEST) {
+        let bestE = null, bestD = AUTOTEST ? 1.15 : 0.35;
+        for (const e of enemies) {
+          _v.copy(e.mesh.position).setY(1.4).sub(player.mesh.position).normalize();
+          _v2.copy(_dir); const ang = _v.angleTo(_v2);
+          if (ang < bestD) { bestD = ang; bestE = e; }
+        }
+        if (bestE) _dir.copy(_v.copy(bestE.mesh.position).setY(1.3).sub(player.mesh.position).normalize());
+      }
+      const tipPos = new THREE.Vector3();
+      u.gunTip.getWorldPosition(tipPos);
+      spawnBullet(tipPos, _dir.clone(), player.dmg);
+      state.shots = (state.shots || 0) + 1;
+      SFX.shoot();
+      state.shake = Math.min(0.25, state.shake + 0.03);
+    }
+
+    // --- đạn player ---
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i]; b.life -= dt;
+      b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt;
+      let dead = b.life <= 0 || b.m.position.y < 0 || Math.hypot(b.m.position.x, b.m.position.z) > ARENA_R + 2;
+      if (!dead) for (const e of enemies) {
+        _v.copy(e.mesh.position); _v.y = b.m.position.y;
+        const dy = Math.abs(b.m.position.y - 1.3 * e.mesh.scale.y);
+        if (Math.hypot(b.m.position.x - _v.x, b.m.position.z - _v.z) < e.radius + 0.25 && dy < 1.8 * e.mesh.scale.y) {
+          damageEnemy(e, b.dmg, b.m.position.clone()); dead = true; break;
+        }
+      }
+      if (dead) { scene.remove(b.m); bullets.splice(i, 1); }
+    }
+    // --- đạn địch (boss) ---
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+      const b = enemyBullets[i]; b.life -= dt;
+      b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt;
+      let dead = b.life <= 0 || b.m.position.y < 0;
+      if (!dead && player.alive && b.m.position.distanceTo(_v.copy(player.mesh.position).setY(1.4)) < 1.15) { damagePlayer(b.dmg); burst(b.m.position, 0xff2d78, 8, 5, 0.4); dead = true; }
+      if (dead) { scene.remove(b.m); enemyBullets.splice(i, 1); }
+    }
+    // --- địch ---
+    for (const e of enemies) {
+      const p = e.mesh.position, pp = player.mesh.position;
+      const dx = pp.x - p.x, dz = pp.z - p.z, dist = Math.hypot(dx, dz);
+      e.mesh.rotation.y = Math.atan2(dx, dz);
+      e.hitFlash = Math.max(0, e.hitFlash - dt);
+      e.mesh.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(e.hitFlash > 0 ? 0x772222 : 0x000000); });
+      if (dist > e.atkRange) {
+        p.x += dx / dist * e.speed * dt; p.z += dz / dist * e.speed * dt;
+        collideObstacles(p, e.radius);
+        p.y = Math.abs(Math.sin(t * 7 + e.wobble)) * 0.06;
+      } else {
+        e.atkCd -= dt;
+        if (e.atkCd <= 0 && player.alive) { e.atkCd = 0.85; damagePlayer(e.dmg); p.y = 0.18; setTimeout(() => p.y = 0, 90); }
+      }
+      // boss bắn đạn
+      if (e.type === 'boss') {
+        e.shootCd -= dt;
+        if (e.shootCd <= 0 && dist < 34 && player.alive) {
+          e.shootCd = 1.7;
+          _dir.copy(pp).setY(1.4).sub(_v.copy(p).setY(2.2)).normalize();
+          spawnEnemyBullet(_v.copy(p).setY(2.6), _dir.clone(), 12);
+          spawnEnemyBullet(_v.copy(p).setY(2.6), _dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.16), 12);
+          spawnEnemyBullet(_v.copy(p).setY(2.6), _dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.16), 12);
+          SFX.enemyShoot();
+        }
+        if (e.mesh.userData.core) e.mesh.userData.core.scale.setScalar(1 + Math.sin(t * 6) * 0.15);
+      }
+      // thanh máu billboard
+      const bar = e.mesh.userData.bar; if (bar) { bar.quaternion.copy(camera.quaternion); e.mesh.userData.barFg.scale.x = Math.max(0, e.hp / e.maxHp); e.mesh.userData.barFg.position.x = -(1 - e.hp / e.maxHp) * 0.81; }
+    }
+    if (bossRef) updateHUD();
+    // --- pickups ---
+    for (let i = pickups.length - 1; i >= 0; i--) {
+      const pk = pickups[i]; pk.life -= dt;
+      pk.mesh.rotation.y += dt * 2.4; pk.mesh.position.y = 1 + Math.sin(t * 3 + i) * 0.18;
+      if (pk.life <= 0) { scene.remove(pk.mesh); pickups.splice(i, 1); continue; }
+      if (player.alive && pk.mesh.position.distanceTo(player.mesh.position) < 1.7) {
+        heal(25); SFX.pickup(); burst(pk.mesh.position, 0x2bff88, 10, 4, 0.45);
+        scene.remove(pk.mesh); pickups.splice(i, 1); updateHUD();
+      }
+    }
+  }
+
+  updateParticles(dt);
+  // --- camera theo sau player ---
+  const pp = player.mesh.position;
+  const cd = 11.5, ch = Math.sin(camPitch) * cd, cy = Math.cos(camPitch) * cd;
+  _v.set(pp.x - Math.sin(camYaw) * -cy * -1, 0, pp.z - Math.cos(camYaw) * -cy * -1); // placeholder, tính trực tiếp bên dưới
+  const backX = pp.x + Math.sin(camYaw) * cy, backZ = pp.z + Math.cos(camYaw) * cy;
+  let camY = 1.6 + ch; // camera tránh chui vào thùng hàng: nâng lên trên nóc thùng khi bị chắn
+  for (const o of obstacles) { if (Math.abs(backX - o.x) < o.hx + 0.7 && Math.abs(backZ - o.z) < o.hz + 0.7) camY = Math.max(camY, (o.h || 3) + 1.4); }
+  state.shake = Math.max(0, state.shake - dt * 2.2);
+  const shX = (Math.random() - 0.5) * state.shake * 0.7, shY = (Math.random() - 0.5) * state.shake * 0.7;
+  camera.position.lerp(_v.set(backX + shX, camY + shY, backZ), state.mode === 'menu' ? 0.03 : 0.35);
+  if (state.mode === 'menu') { // camera quay quanh Rubi ở menu
+    const a = t * 0.25;
+    camera.position.lerp(_v.set(Math.sin(a) * 10.5, 4.2, Math.cos(a) * 10.5), 0.05);
+    camera.lookAt(0, 1.8, 2);
+    player.mesh.rotation.y = Math.sin(t * 0.4) * 0.5;
+    player.mesh.userData.armL.rotation.z = Math.sin(t * 2.2) * 0.25 + 0.15;
+  } else {
+    camera.lookAt(pp.x - Math.sin(camYaw) * 4, 1.7 + Math.tan(0) + (0.34 - camPitch) * 6, pp.z - Math.cos(camYaw) * 4);
+  }
+  rim.intensity = 55 + Math.sin(t * 2.4) * 14;
+  renderer.render(scene, camera);
+}
+animate();
+updateHUD();
+
+// ---------- Autotest (chỉ chạy khi có ?autotest=1) ----------
+if (AUTOTEST) {
+  window.__errors = [];
+  addEventListener('error', e => window.__errors.push(String(e.message)));
+  startGame();
+  const t0 = performance.now();
+  let phase2 = null, killsBeforePhase2 = 0;
+  const iv = setInterval(() => {
+    const el = (performance.now() - t0) / 1000;
+    // lái bot: luôn quay mặt về địch gần nhất
+    if (enemies.length) {
+      let nd = 1e9, ne = null;
+      for (const e of enemies) { const d = e.mesh.position.distanceTo(player.mesh.position); if (d < nd) { nd = d; ne = e; } }
+      if (ne) { const dx = ne.mesh.position.x - player.mesh.position.x, dz = ne.mesh.position.z - player.mesh.position.z; camYaw = Math.atan2(-dx, -dz); }
+    }
+    // phase 2 (kiểm chứng hạ địch xác định): đặt 1 địch yếu ngay trước mặt
+    if (el > 16 && !phase2) {
+      phase2 = 'armed'; killsBeforePhase2 = state.kills;
+      const e = spawnEnemy('chaser'); e.hp = 1; e.maxHp = 1;
+      e.mesh.position.set(player.mesh.position.x + (-Math.sin(camYaw)) * 7, 0, player.mesh.position.z + (-Math.cos(camYaw)) * 7);
+    }
+    if (el > 30) {
+      clearInterval(iv);
+      const res = { ok: true, mode: state.mode, wave: state.wave, enemiesAlive: enemies.length, kills: state.kills, phase2Kill: state.kills > killsBeforePhase2, score: state.score, shots: state.shots || 0, playerHp: Math.round(player.hp), errors: window.__errors };
+      window.__AUTOTEST__ = res;
+      $('autotest-result').textContent = 'AUTOTEST ' + JSON.stringify(res);
+      document.title = 'AUTOTEST_DONE';
+    }
+  }, 500);
+}
+window.KTEAM = { scene, state, player, enemies, startGame, spawnEnemy };
+</script>
+</body>
+</html>

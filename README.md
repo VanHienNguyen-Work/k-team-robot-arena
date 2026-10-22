@@ -1,0 +1,65 @@
+# K TEAM — Robot Arena 3D 🤖⚡
+
+Game 3D arena shooter chạy ngay trên trình duyệt: điều khiển **Rubi** — robot đỏ tươi của **K Team** — sống sót qua từng wave robot nổi loạn, chọn nâng cấp giữa các wave và hạ **Boss mỗi 5 wave**.
+
+![genre](https://img.shields.io/badge/genre-3D%20arena%20shooter-e8212f) ![tech](https://img.shields.io/badge/tech-Three.js%20%2B%20WebGL-37e0ff) ![build](https://img.shields.io/badge/build-kh%C3%B4ng%20c%E1%BA%A7n-ffc21c)
+
+## Chơi ngay
+
+Không cần cài đặt, không cần build — chỉ cần một static server:
+
+```bash
+# cách 1
+python3 -m http.server 8080
+# cách 2
+npx serve .
+```
+
+Mở `http://localhost:8080` và bấm **Vào đấu trường**.
+
+> Thư viện Three.js (MIT) được đóng gói sẵn trong `lib/` — game chạy **offline 100%**, không phụ thuộc CDN.
+
+## Cách chơi
+
+| Điều khiển | Hành động |
+|---|---|
+| `W A S D` | Di chuyển theo hướng camera |
+| Chuột | Xoay camera / ngắm (click vào game để khoá chuột) |
+| Giữ chuột trái | Bắn liên thanh |
+| `Shift` | Dash — lướt né đòn, bất tử trong chớp mắt |
+| `P` / `Esc` | Tạm dừng |
+| `1` `2` `3` | Chọn nâng cấp giữa wave |
+| 📱 Mobile | Joystick trái, nút 🔥 bắn (có auto-aim), 💨 dash, vuốt màn hình để xoay camera |
+
+## Gameplay
+
+- **Wave vô hạn, độ khó tăng dần**: số lượng và máu địch tăng theo wave.
+- **4 loại địch**: Scout (nhanh, yếu) · Chaser (cân bằng) · Tank (chậm, trâu, đòn đau) · **Boss mỗi 5 wave** (khổng lồ, bắn đạn 3 tia, lõi năng lượng).
+- **Hệ thống Combo**: hạ địch liên tiếp để nhân điểm tối đa x5.
+- **Nâng cấp giữa wave** (chọn 1 trong 3): sát thương, tốc độ bắn, máu tối đa, tốc độ chạy, hồi máu…
+- **Vật phẩm hồi máu** rơi ra từ địch (18%) — nhặt để +25 HP.
+- Kỷ lục điểm lưu tự động trên trình duyệt (localStorage).
+
+## Kỹ thuật
+
+- Game nằm trong `index.html` (~900 dòng) + Three.js r160 đóng gói tại `lib/three.module.min.js` (bản quyền MIT của Three.js Authors): ES module + import map, không bundler, chạy offline.
+- Nhân vật Rubi và toàn bộ địch dựng bằng hình khối 3D theo đúng thiết kế đã khoá của tuyến Robo/K Team: thân đỏ tươi `#e8212f`, ngực trắng chữ **K** + tia sét vàng, 1 mắt trắng lớn, ăng-ten đầu.
+- Hiệu ứng: đổ bóng thời gian thực (PCF soft shadow), hạt nổ (particles), rung màn hình, hitmarker, thanh máu billboard trên đầu địch, đạn phát sáng.
+- Âm thanh tổng hợp bằng WebAudio (bắn, nổ, nhặt đồ, qua wave…) — không cần file audio.
+- Camera third-person orbit + pointer lock trên desktop; joystick ảo + auto-aim trên mobile.
+- Có chế độ tự kiểm tra: mở `index.html?autotest=1` — game tự chơi 14 giây và ghi kết quả vào `#autotest-result` / `window.__AUTOTEST__`.
+
+## Cấu trúc repo
+
+```
+.
+├── index.html   # toàn bộ game (HTML + CSS + JS)
+├── lib/
+│   └── three.module.min.js   # Three.js r160 (MIT), đóng gói sẵn để chạy offline
+├── README.md
+└── .gitignore
+```
+
+## Bản quyền
+
+Nhân vật Rubi / K Team và mã nguồn game thuộc về **© Ryan Nguyễn**.
