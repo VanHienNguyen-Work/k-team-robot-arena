@@ -8,6 +8,7 @@ Game 3D arena shooter chạy ngay trên trình duyệt: điều khiển **Rubi**
 
 ![Menu chính](screenshots/menu.png)
 ![Gameplay — Rubi giữa đấu trường, HUD, combo](screenshots/gameplay.png)
+![Gameplay mobile — shoulder-cam lệch tâm, camera tự bám, joystick + nút bắn](screenshots/gameplay-mobile.png)
 
 ## Chơi ngay
 
@@ -36,7 +37,7 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 | `Shift` | Dash — lướt né đòn, bất tử trong chớp mắt |
 | `P` / `Esc` | Tạm dừng |
 | `1` `2` `3` | Chọn nâng cấp giữa wave |
-| 📱 Mobile | Joystick trái, nút 🔥 bắn (có auto-aim), 💨 dash, vuốt màn hình để xoay camera |
+| 📱 Mobile | Joystick trái di chuyển — **camera tự bám theo hướng chạy**, giữ nút 🔥 bắn thì **Rubi tự quay mặt về địch gần nhất + đạn tự khóa mục tiêu**, 💨 dash; vuốt màn hình chỉ khi muốn tự chỉnh camera |
 
 ## Gameplay
 
