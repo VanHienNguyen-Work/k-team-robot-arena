@@ -11,7 +11,9 @@ Game 3D arena shooter chạy ngay trên trình duyệt: điều khiển **Rubi**
 
 ## Chơi ngay
 
-Không cần cài đặt, không cần build — chỉ cần một static server:
+**▶ Chơi trực tiếp trên trình duyệt (GitHub Pages): https://vanhiennguyen-work.github.io/k-team-robot-arena/**
+
+Hoặc chạy local — không cần cài đặt, không cần build, chỉ cần một static server:
 
 ```bash
 # cách 1
