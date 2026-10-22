@@ -38,6 +38,8 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 | `P` / `Esc` | Tạm dừng |
 | `1` `2` `3` | Chọn nâng cấp giữa wave |
 | `T` / nút 🎯 trên HUD | Bật/tắt **chế độ tâm bắn tự động**: tâm tự bám theo địch gần nhất (cả hướng ngang + độ ngẩng), tâm chuyển vàng + hiện nhãn ĐANG KHÓA khi bám; tự ngắm bằng chuột/vuốt thì chế độ tạm nhường rồi bám lại |
+
+> **Độ ổn định camera:** tâm tự động có giới hạn cứng tốc độ quay (không bao giờ "nhảy"), giữ mục tiêu dính (chỉ đổi khi địch khác gần hơn 40%), rung màn hình dùng sóng mượt thay vì ngẫu nhiên và không rung theo từng phát bắn. FOV: 100° (desktop) / 120° (mobile) — mức rộng tối đa còn chơi được trước khi méo mắt cá.
 | 📱 Mobile | Joystick trái di chuyển — **camera tự bám theo hướng chạy**, giữ nút 🔥 bắn thì **Rubi tự quay mặt về địch gần nhất + đạn tự khóa mục tiêu**, 💨 dash; vuốt màn hình chỉ khi muốn tự chỉnh camera |
 
 ## Gameplay
