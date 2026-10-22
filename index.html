@@ -681,8 +681,12 @@ function pickUpgrade(i) {
 // ---------- Combat ----------
 function damagePlayer(n) {
   if (player.invuln > 0 || !player.alive || state.mode !== 'playing') return;
-  player.hp -= n; state.shake = Math.min(0.55, state.shake + 0.2);
-  $('vignette').style.opacity = 1; setTimeout(() => $('vignette').style.opacity = 0, 130);
+  player.hp -= n;
+  if (state.time - (state.lastShakeT || -9) > 0.3) { // rung + chớp đỏ tối đa 1 lần mỗi 0.3s, chống cộng dồn khi bị vây đánh
+    state.lastShakeT = state.time;
+    state.shake = Math.min(0.55, state.shake + 0.2);
+    $('vignette').style.opacity = 1; setTimeout(() => $('vignette').style.opacity = 0, 130);
+  }
   SFX.hurt(); updateHUD();
   if (player.hp <= 0) { player.hp = 0; gameOver(); }
 }
@@ -745,7 +749,7 @@ function startGame() {
   for (const b of bullets) scene.remove(b.m); bullets.length = 0;
   for (const b of enemyBullets) scene.remove(b.m); enemyBullets.length = 0;
   for (const p of pickups) scene.remove(p.mesh); pickups.length = 0;
-  bossRef = null; $('boss-wrap').classList.remove('on'); state.lockTarget = null; setLockUI(null);
+  bossRef = null; $('boss-wrap').classList.remove('on'); state.lockTarget = null; state.aimPoint = null; setLockUI(null);
   Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 0, comboTimer: 0, multiplier: 1, shake: 0, spawnQueue: [], waveActive: false });
   Object.assign(player, { hp: 100, maxHp: 100, speed: 7.2, dmg: 12, fireRate: 0.16, fireTimer: 0, dashCd: 0, dashTime: 0, invuln: 0, alive: true, dashRate: 1 });
   player.mesh.visible = false; viewModel.visible = true; viewModel.position.set(0.30, -0.30, -0.72); viewModel.rotation.set(0, -0.04, 0); player.mesh.position.set(0, 0, 6); camYaw = Math.PI; camPitch = IS_TOUCH ? 0.52 : 0.34;
@@ -800,32 +804,45 @@ function animate() {
   if (state.mode === 'playing') {
     // --- tâm bắn tự động: camera tự bám địch gần nhất (ngang + ngẩng), nhường khi người chơi tự ngắm ---
     if (state.autoAim && state.time > Math.max(manualLookUntil, touchManualUntil)) {
-      const curValid = state.lockTarget && enemies.includes(state.lockTarget) && state.lockTarget.mesh.position.distanceTo(player.mesh.position) <= 52;
-      if (!curValid) {
-        let nd = 52; state.lockTarget = null;
-        for (const e of enemies) { const d = e.mesh.position.distanceTo(player.mesh.position); if (d < nd) { nd = d; state.lockTarget = e; } }
-      } else {
-        // giữ mục tiêu dính: chỉ đổi khi địch khác gần hơn hẳn 40% (chống nhảy qua lại)
-        const curD = state.lockTarget.mesh.position.distanceTo(player.mesh.position);
-        for (const e of enemies) { if (e !== state.lockTarget && e.mesh.position.distanceTo(player.mesh.position) < curD * 0.6) { state.lockTarget = e; break; } }
-      }
-      const lt = state.lockTarget;
-      if (lt) {
-        const dx = lt.mesh.position.x - player.mesh.position.x, dz = lt.mesh.position.z - player.mesh.position.z;
+      // Chọn mục tiêu bằng ĐIỂM SỐ: gần người chơi + gần tâm ngắm hiện tại + ưu tiên boss + điểm dính cho mục tiêu đang khóa.
+      // Đổi mục tiêu có cooldown 0.7s và phải thắng điểm rõ rệt -> hết cảnh tâm giật qua lại giữa cả đàn.
+      const pp0 = player.mesh.position;
+      const scoreOf = e => {
+        const dx = e.mesh.position.x - pp0.x, dz = e.mesh.position.z - pp0.z;
+        let ang = Math.atan2(-dx, -dz) - camYaw; ang = Math.atan2(Math.sin(ang), Math.cos(ang));
+        return Math.hypot(dx, dz) * 0.7 + Math.abs(ang) * 22 - (e.type === 'boss' ? 10 : 0) - (e === state.lockTarget ? 16 : 0);
+      };
+      let cur = state.lockTarget;
+      if (cur && (!enemies.includes(cur) || cur.mesh.position.distanceTo(pp0) > 52)) cur = null;
+      let best = null, bestScore = 1e9;
+      for (const e of enemies) { const sc = scoreOf(e); if (sc < bestScore) { bestScore = sc; best = e; } }
+      if (!cur) { cur = best; if (cur) state.lastSwitch = state.time; }
+      else if (best && best !== cur && bestScore < scoreOf(cur) - 6 && state.time - (state.lastSwitch || -9) > 0.7) { cur = best; state.lastSwitch = state.time; }
+      state.lockTarget = cur;
+      if (cur) {
+        // LỌC ĐIỂM NGẮM trong không gian 3D: điểm ngắm trượt mượt tới ngực địch với tốc độ giới hạn 30 đv/s.
+        // Góc quay suy ra từ điểm đã lọc nên không bao giờ giật, kể cả khi địch ở rất gần (nơi tốc độ góc vốn bùng nổ).
+        _v3.set(cur.mesh.position.x, 1.3 * cur.mesh.scale.y, cur.mesh.position.z);
+        if (!state.aimPoint) state.aimPoint = _v3.clone();
+        const ap = state.aimPoint;
+        _v.copy(_v3).sub(ap).multiplyScalar(Math.min(1, dt * 12));
+        const stepLen = _v.length(), maxStep = 30 * dt;
+        if (stepLen > maxStep) _v.multiplyScalar(maxStep / stepLen);
+        ap.add(_v);
+        const dx = ap.x - pp0.x, dz = ap.z - pp0.z;
         const dist = Math.max(2, Math.hypot(dx, dz));
         const desiredYaw = Math.atan2(-dx, -dz);
-        const desiredPitch = THREE.MathUtils.clamp(0.34 - Math.atan2(1.3 * lt.mesh.scale.y - 2.95, dist), 0.05, 1.02);
+        const desiredPitch = THREE.MathUtils.clamp(0.34 - Math.atan2(ap.y - 2.95, dist), 0.15, 0.9);
         const shooting = firing || touchFiring || AUTOTEST;
         const yawBefore = camYaw;
-        camYaw = lerpAngle(camYaw, desiredYaw, Math.min(1, dt * (shooting ? 5 : 2.6)));
-        // giới hạn cứng tốc độ quay: tâm không bao giờ "nhảy" quá ngưỡng mỗi giây
-        let dYaw = camYaw - yawBefore; const maxDYaw = dt * (shooting ? 2.9 : 1.8);
+        camYaw = lerpAngle(camYaw, desiredYaw, Math.min(1, dt * (shooting ? 4 : 2.2)));
+        let dYaw = camYaw - yawBefore; const maxDYaw = dt * (shooting ? 2.2 : 1.4);
         if (Math.abs(dYaw) > maxDYaw) camYaw = yawBefore + Math.sign(dYaw) * maxDYaw;
         const pitchBefore = camPitch;
-        camPitch += (desiredPitch - camPitch) * Math.min(1, dt * 3);
-        let dPitch = camPitch - pitchBefore; const maxDPitch = dt * 1.1;
+        camPitch += (desiredPitch - camPitch) * Math.min(1, dt * 2.2);
+        let dPitch = camPitch - pitchBefore; const maxDPitch = dt * 0.7;
         if (Math.abs(dPitch) > maxDPitch) camPitch = pitchBefore + Math.sign(dPitch) * maxDPitch;
-        setLockUI(lt);
+        setLockUI(cur);
       } else setLockUI(null);
     } else if (!state.autoAim) setLockUI(null);
     // --- spawn ---
@@ -844,7 +861,7 @@ function animate() {
     let ix = 0, iz = 0;
     if (keys.KeyW) iz += 1; if (keys.KeyS) iz -= 1; if (keys.KeyA) ix -= 1; if (keys.KeyD) ix += 1;
     if (IS_TOUCH) { ix += joy.x; iz -= joy.y; }
-    if (AUTOTEST) { iz = 1; ix = Math.sin(t * 0.7) * 0.6; camYaw += dt * 0.45; }
+    if (AUTOTEST) { iz = 1; ix = Math.sin(t * 0.7) * 0.6; }
     curIx = ix;
     const len = Math.hypot(ix, iz); if (len > 1) { ix /= len; iz /= len; }
     const dashing = player.dashTime > 0;
