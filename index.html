@@ -179,7 +179,7 @@ import * as THREE from 'three';
 /* ============================================================
    K TEAM — ROBOT ARENA 3D
    Rubi (robot đỏ tươi của K Team) vs đàn robot nổi loạn.
-   Third-person arena shooter — Three.js, không cần build.
+   First-person (FPS) arena shooter — Three.js, không cần build.
    ============================================================ */
 
 const ARENA_R = 38;
@@ -497,6 +497,31 @@ const player = {
 };
 player.mesh.position.set(0, 0, 6);
 scene.add(player.mesh);
+
+// ---------- Súng góc nhìn thứ nhất (viewmodel): chỉ thấy súng + tâm khi chơi ----------
+const viewModel = new THREE.Group();
+{
+  const arm = box(0.11, 0.11, 0.34, M.red, 0, -0.07, 0.2); viewModel.add(arm); // cẳng tay đỏ của Rubi đỡ súng
+  viewModel.add(box(0.09, 0.17, 0.1, M.redDark, 0, -0.1, 0.02)).children; // báng súng
+  viewModel.children[viewModel.children.length - 1].rotation.x = 0.35;
+  viewModel.add(box(0.14, 0.18, 0.54, M.red, 0, 0, -0.12)); // thân súng đỏ tươi
+  viewModel.add(box(0.07, 0.06, 0.32, M.gold, 0, 0.12, -0.14)); // ray vàng trên thân
+  viewModel.add(box(0.05, 0.09, 0.05, M.black, 0, 0.19, -0.02)); // kính ngắm sau
+  const barrel = cyl(0.045, 0.045, 0.36, M.gun, 0, 0.03, -0.55, 12); barrel.rotation.x = Math.PI / 2; viewModel.add(barrel);
+  viewModel.add(box(0.05, 0.08, 0.05, M.glowYellow, 0, 0.1, -0.38, false)); // đầu ruồi phát sáng
+  const muzzle = sph(0.05, M.glowYellow, 0, 0.03, -0.74); viewModel.add(muzzle);
+  const flash = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.95 }));
+  flash.position.set(0, 0.03, -0.8); flash.visible = false; viewModel.add(flash);
+  viewModel.userData.muzzle = muzzle; viewModel.userData.flash = flash;
+  viewModel.position.set(0.36, -0.33, -0.7);
+  viewModel.rotation.y = -0.04;
+  viewModel.scale.setScalar(0.85);
+  viewModel.visible = false;
+  viewModel.traverse(o => { o.castShadow = false; o.receiveShadow = false; });
+}
+scene.add(camera);
+camera.add(viewModel);
+let vmKick = 0, vmFlashT = 0, leanCur = 0, curIx = 0;
 const enemies = [], pickups = [];
 let bossRef = null;
 
@@ -689,10 +714,10 @@ function startGame() {
   bossRef = null; $('boss-wrap').classList.remove('on');
   Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 0, comboTimer: 0, multiplier: 1, shake: 0, spawnQueue: [], waveActive: false });
   Object.assign(player, { hp: 100, maxHp: 100, speed: 7.2, dmg: 12, fireRate: 0.16, fireTimer: 0, dashCd: 0, dashTime: 0, invuln: 0, alive: true, dashRate: 1 });
-  player.mesh.visible = true; player.mesh.position.set(0, 0, 6); camYaw = Math.PI; camPitch = IS_TOUCH ? 0.52 : 0.34;
+  player.mesh.visible = false; viewModel.visible = true; viewModel.position.set(0.36, -0.33, -0.7); viewModel.rotation.set(0, -0.04, 0); player.mesh.position.set(0, 0, 6); camYaw = Math.PI; camPitch = IS_TOUCH ? 0.52 : 0.34;
   $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause-screen').classList.add('hidden');
   $('hud').classList.add('on'); $('btn-pause').classList.add('on');
-  if (IS_TOUCH) $('hint').textContent = 'Joystick di chuyển · Camera tự bám hướng chạy · Giữ 🔥 bắn: Rubi tự quay về địch gần nhất';
+  if (IS_TOUCH) $('hint').textContent = 'Góc nhìn thứ nhất · Joystick di chuyển · Camera tự bám hướng chạy · Giữ 🔥 bắn: tự quay về địch gần nhất';
   if (IS_TOUCH) $('touch').classList.add('on');
   state.mode = 'playing';
   updateHUD(); startWave(1);
@@ -716,6 +741,7 @@ function toMenu() {
   $('pause-screen').classList.add('hidden'); $('gameover').classList.add('hidden'); $('hud').classList.remove('on');
   $('touch').classList.remove('on'); $('btn-pause').classList.remove('on');
   $('menu').classList.remove('hidden');
+  viewModel.visible = false;
   $('best-line').textContent = state.best ? `🏆 Kỷ lục của bạn: ${state.best.toLocaleString('vi-VN')} điểm` : '';
   player.mesh.visible = true;
 }
@@ -754,6 +780,7 @@ function animate() {
     if (keys.KeyW) iz += 1; if (keys.KeyS) iz -= 1; if (keys.KeyA) ix -= 1; if (keys.KeyD) ix += 1;
     if (IS_TOUCH) { ix += joy.x; iz -= joy.y; }
     if (AUTOTEST) { iz = 1; ix = Math.sin(t * 0.7) * 0.6; camYaw += dt * 0.45; }
+    curIx = ix;
     const len = Math.hypot(ix, iz); if (len > 1) { ix /= len; iz /= len; }
     const dashing = player.dashTime > 0;
     const spd = player.speed * (dashing ? 2.6 : 1);
@@ -805,19 +832,21 @@ function animate() {
       _dir.copy(_rawDir);
       _dir.y = THREE.MathUtils.clamp(_dir.y * 0.35, -0.22, 0.22);
       _dir.normalize();
-      // auto-aim: mobile khóa mục tiêu trong nón rộng 0.95 rad, desktop hẹp 0.35
+      const tipPos = new THREE.Vector3();
+      viewModel.userData.muzzle.getWorldPosition(tipPos);
+      vmKick = 1; vmFlashT = 0.05; viewModel.userData.flash.visible = true;
+      viewModel.userData.flash.scale.setScalar(0.8 + Math.random() * 0.8);
+      // auto-aim: nón ngắm tính theo hướng camera, hướng đạn tính TỪ ĐẦU NÒNG tới ngực địch
       let aimed = false;
       if (IS_TOUCH || AUTOTEST) {
         let bestE = null, bestD = AUTOTEST ? 1.15 : (IS_TOUCH ? 0.95 : 0.35);
         for (const e of enemies) {
-          _v.copy(e.mesh.position).setY(1.4).sub(player.mesh.position).normalize();
-          _v2.copy(_dir); const ang = _v.angleTo(_v2);
+          _v.copy(e.mesh.position).setY(1.3 * e.mesh.scale.y).sub(camera.position).normalize();
+          const ang = _v.angleTo(_rawDir);
           if (ang < bestD) { bestD = ang; bestE = e; }
         }
-        if (bestE) { _dir.copy(_v.copy(bestE.mesh.position).setY(1.3).sub(player.mesh.position).normalize()); aimed = true; }
+        if (bestE) { _dir.copy(_v.copy(bestE.mesh.position).setY(1.3 * bestE.mesh.scale.y).sub(tipPos).normalize()); aimed = true; }
       }
-      const tipPos = new THREE.Vector3();
-      u.gunTip.getWorldPosition(tipPos);
       if (!aimed) { // hội tụ đạn về đúng điểm tâm ngắm ở xa 30 đơn vị
         _v3.copy(camera.position).addScaledVector(_rawDir, 30);
         if (_v3.y < 1.1) _v3.y = 1.1;
@@ -836,8 +865,7 @@ function animate() {
       let dead = b.life <= 0 || b.m.position.y < 0 || Math.hypot(b.m.position.x, b.m.position.z) > ARENA_R + 2;
       if (!dead) for (const e of enemies) {
         _v.copy(e.mesh.position); _v.y = b.m.position.y;
-        const dy = Math.abs(b.m.position.y - 1.3 * e.mesh.scale.y);
-        if (Math.hypot(b.m.position.x - _v.x, b.m.position.z - _v.z) < e.radius + 0.25 && dy < 1.8 * e.mesh.scale.y) {
+        if (Math.hypot(b.m.position.x - _v.x, b.m.position.z - _v.z) < e.radius + 0.25 && b.m.position.y > -0.2 && b.m.position.y < 3.4 * e.mesh.scale.y) {
           damageEnemy(e, b.dmg, b.m.position.clone()); dead = true; break;
         }
       }
@@ -883,6 +911,12 @@ function animate() {
       const bar = e.mesh.userData.bar; if (bar) { bar.quaternion.copy(camera.quaternion); e.mesh.userData.barFg.scale.x = Math.max(0, e.hp / e.maxHp); e.mesh.userData.barFg.position.x = -(1 - e.hp / e.maxHp) * 0.81; }
     }
     if (bossRef) updateHUD();
+    // --- súng FPS: bob khi chạy, giật lùi khi bắn ---
+    vmKick = Math.max(0, vmKick - dt * 9);
+    if (vmFlashT > 0) { vmFlashT -= dt; if (vmFlashT <= 0) viewModel.userData.flash.visible = false; }
+    viewModel.position.set(0.36, -0.33 + (moving ? Math.sin(player.walkPhase * 2) * 0.014 : Math.sin(t * 1.7) * 0.007) - (player.dashTime > 0 ? 0.035 : 0), -0.7 + vmKick * 0.09);
+    viewModel.rotation.x = vmKick * 0.1;
+    viewModel.rotation.z = leanCur * 0.7;
     // --- pickups ---
     for (let i = pickups.length - 1; i >= 0; i--) {
       const pk = pickups[i]; pk.life -= dt;
@@ -896,26 +930,32 @@ function animate() {
   }
 
   updateParticles(dt);
-  // --- camera theo sau player ---
+  // --- camera FPS nhập vai: đặt tại mắt Rubi, chỉ thấy súng + tâm ---
   const pp = player.mesh.position;
-  const cd = IS_TOUCH ? 13.5 : 11.5, ch = Math.sin(camPitch) * cd, cy = Math.cos(camPitch) * cd;
-  const backX = pp.x + Math.sin(camYaw) * cy, backZ = pp.z + Math.cos(camYaw) * cy;
-  let camY = 1.6 + ch; // camera tránh chui vào thùng hàng: nâng lên trên nóc thùng khi bị chắn
-  for (const o of obstacles) { if (Math.abs(backX - o.x) < o.hx + 0.7 && Math.abs(backZ - o.z) < o.hz + 0.7) camY = Math.max(camY, (o.h || 3) + 1.4); }
   state.shake = Math.max(0, state.shake - dt * 2.2);
-  const shX = (Math.random() - 0.5) * state.shake * 0.7, shY = (Math.random() - 0.5) * state.shake * 0.7;
-  // shoulder-cam: camera lệch vai phải, điểm nhìn lệch ít hơn -> nhân vật nằm lệch trái, tâm ngắm thoáng
-  const rX = Math.cos(camYaw), rZ = -Math.sin(camYaw);
-  const shoulder = innerWidth < innerHeight ? 2.6 : (IS_TOUCH ? 1.5 : 1.8); // dọc (portrait): lệch mạnh hơn để Rubi ra khỏi tâm hẳn
-  camera.position.lerp(_v.set(backX + rX * shoulder + shX, camY + shY, backZ + rZ * shoulder), state.mode === 'menu' ? 0.03 : 0.35);
-  if (state.mode === 'menu') { // camera quay quanh Rubi ở menu
+  const shX = (Math.random() - 0.5) * state.shake * 0.5, shY = (Math.random() - 0.5) * state.shake * 0.5;
+  if (state.mode === 'menu') { // menu vẫn khoe Rubi 3D quay vòng
     const a = t * 0.25;
     camera.position.lerp(_v.set(Math.sin(a) * 10.5, 4.2, Math.cos(a) * 10.5), 0.05);
     camera.lookAt(0, 1.8, 2);
     player.mesh.rotation.y = Math.sin(t * 0.4) * 0.5;
     player.mesh.userData.armL.rotation.z = Math.sin(t * 2.2) * 0.25 + 0.15;
   } else {
-    camera.lookAt(pp.x - Math.sin(camYaw) * 5 + rX * shoulder * 0.25, 1.7 + (0.34 - camPitch) * 6, pp.z - Math.cos(camYaw) * 5 + rZ * shoulder * 0.25);
+    const bobY = state.mode === 'playing' ? Math.abs(Math.sin(player.walkPhase)) * 0.055 : 0;
+    const eyeY = 2.95 + bobY;
+    camera.position.set(pp.x + shX, eyeY + shY, pp.z);
+    const lookPitch = 0.34 - camPitch;
+    const cp = Math.cos(lookPitch);
+    camera.lookAt(pp.x - Math.sin(camYaw) * cp, eyeY + Math.sin(lookPitch), pp.z - Math.cos(camYaw) * cp);
+    leanCur += ((state.mode === 'playing' ? -curIx * 0.028 : 0) - leanCur) * Math.min(1, dt * 8);
+    camera.rotateZ(leanCur + shX * 0.012);
+    const baseFov = IS_TOUCH ? 70 : 62;
+    const targetFov = player.dashTime > 0 ? baseFov + 7 : baseFov;
+    if (Math.abs(camera.fov - targetFov) > 0.1) { camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); }
+    if (state.mode === 'over' && viewModel.visible) { // gục ngã: súng rơi xuống
+      viewModel.position.y -= dt * 0.55; viewModel.rotation.x -= dt * 1.5;
+      if (viewModel.position.y < -0.9) viewModel.visible = false;
+    }
   }
   rim.intensity = 55 + Math.sin(t * 2.4) * 14;
   renderer.render(scene, camera);

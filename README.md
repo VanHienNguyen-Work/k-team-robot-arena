@@ -1,6 +1,6 @@
 # K TEAM — Robot Arena 3D 🤖⚡
 
-Game 3D arena shooter chạy ngay trên trình duyệt: điều khiển **Rubi** — robot đỏ tươi của **K Team** — sống sót qua từng wave robot nổi loạn, chọn nâng cấp giữa các wave và hạ **Boss mỗi 5 wave**.
+Game 3D arena shooter **góc nhìn thứ nhất (FPS)** chạy ngay trên trình duyệt: điều khiển **Rubi** — robot đỏ tươi của **K Team** — sống sót qua từng wave robot nổi loạn, chọn nâng cấp giữa các wave và hạ **Boss mỗi 5 wave**.
 
 ![genre](https://img.shields.io/badge/genre-3D%20arena%20shooter-e8212f) ![tech](https://img.shields.io/badge/tech-Three.js%20%2B%20WebGL-37e0ff) ![build](https://img.shields.io/badge/build-kh%C3%B4ng%20c%E1%BA%A7n-ffc21c)
 
@@ -54,7 +54,7 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 - Nhân vật Rubi và toàn bộ địch dựng bằng hình khối 3D theo đúng thiết kế đã khoá của tuyến Robo/K Team: thân đỏ tươi `#e8212f`, ngực trắng chữ **K** + tia sét vàng, 1 mắt trắng lớn, ăng-ten đầu.
 - Hiệu ứng: đổ bóng thời gian thực (PCF soft shadow), hạt nổ (particles), rung màn hình, hitmarker, thanh máu billboard trên đầu địch, đạn phát sáng.
 - Âm thanh tổng hợp bằng WebAudio (bắn, nổ, nhặt đồ, qua wave…) — không cần file audio.
-- Camera third-person orbit + pointer lock trên desktop; joystick ảo + auto-aim trên mobile.
+- Camera **góc nhìn thứ nhất nhập vai**: chỉ hiển thị khẩu súng của Rubi + tâm ngắm — súng rung khi chạy (bob), giật lùi + chớp lửa đầu nòng khi bắn, camera nghiêng khi strafe và FOV giãn khi dash; pointer lock trên desktop; camera tự bám + joystick ảo + auto-aim trên mobile.
 - Có chế độ tự kiểm tra: mở `index.html?autotest=1` — game tự chơi 14 giây và ghi kết quả vào `#autotest-result` / `window.__AUTOTEST__`.
 
 ## Cấu trúc repo
