@@ -73,7 +73,7 @@
   #gameover-stats{margin-top:14px;font-size:17px;line-height:1.7;color:#dbe4ff}
   #gameover-stats b{color:#fff;font-size:21px}
   /* ---------- Upgrade ---------- */
-  #upgrade{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(3,5,12,.78);padding:16px 12px}
+  #upgrade{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:flex-start;flex-direction:column;background:rgba(3,5,12,.78);padding:9vh 12px 16px;pointer-events:auto}
   #upgrade.on{display:flex}
   #upgrade h2{font-size:clamp(19px,4.4vw,26px);font-weight:900;letter-spacing:.03em}
   #upgrade p{color:#c9d4ff;margin-top:4px;font-size:12.5px}
@@ -109,6 +109,7 @@
   #btn-pause{position:fixed;top:86px;right:12px;z-index:7;width:42px;height:42px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:#fff;font-size:17px;display:none;pointer-events:auto;cursor:pointer}
   #btn-pause.on{display:block}
   #loadout-text{font-size:11px;color:#9be9ff;font-weight:700;margin-top:3px}
+  #pet-hud{font-size:11px;color:#a7ffc4;font-weight:700;margin-top:3px}
   #pet-line{margin-top:8px;font-size:14.5px;color:#dbe4ff}
   #pet-line b{color:var(--gold)}
   /* ---------- Shop ---------- */
@@ -121,6 +122,14 @@
   #shop-close{pointer-events:auto;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid var(--line);color:#fff;font-size:15px;font-weight:800;padding:9px 18px;border-radius:99px}
   #shop-loadout{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:14px;line-height:1.6;color:#dbe4ff}
   #shop-loadout b{color:#fff}
+  #shop-pet{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+  #shop-pet .ph{font-size:14.5px;font-weight:800;color:#fff}
+  #shop-pet .ph span{color:#9be9ff;font-weight:700;font-size:12.5px}
+  .stat-row{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:12px;color:#b9c6f5}
+  .stat-row .lb{width:86px;font-weight:700;flex-shrink:0}
+  .stat-row .tr{flex:1;height:8px;background:rgba(255,255,255,.09);border-radius:99px;overflow:hidden}
+  .stat-row .fl{height:100%;border-radius:99px}
+  .stat-row .vl{width:52px;text-align:right;font-weight:800;color:#fff;flex-shrink:0}
   .shop-sec{margin-top:22px;font-size:19px;font-weight:900;letter-spacing:.03em}
   .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:12px}
   .item{background:linear-gradient(170deg,rgba(38,44,80,.95),rgba(14,17,36,.95));border:2px solid var(--line);border-radius:16px;padding:16px 14px;text-align:left}
@@ -148,6 +157,7 @@
       <div id="hp-label"><span>🤖 RUBI — HP</span><span id="hp-text">100/100</span></div>
       <div id="hp-bar"><div id="hp-fill"></div></div>
       <div id="dash-row"><span>DASH</span><div id="dash-bar"><div id="dash-fill"></div></div><span style="color:#7d8fc9">SHIFT</span></div>
+      <div id="pet-hud"></div>
     </div>
     <div class="panel" id="wave-panel"><div class="wave" id="wave-text">WAVE 1</div><div class="left" id="left-text">Địch còn: 0</div></div>
     <div class="panel" id="stats-panel"><div class="score" id="score-text">0</div><div class="sub" id="best-text">Kỷ lục: 0</div><div id="loadout-text">🔫 Blaster Rubi</div></div>
@@ -222,6 +232,7 @@
 <div id="shop"><div id="shop-inner">
   <div id="shop-head"><h2>🛒 CỬA HÀNG TRANG BỊ</h2><div id="shop-credits">💰 0 điểm</div><button id="shop-close">✕ Đóng</button></div>
   <div id="shop-loadout"></div>
+  <div id="shop-pet"></div>
   <div class="shop-sec">🔫 Vũ khí (bấm để trang bị — súng đổi hình ngay trong trận)</div>
   <div class="shop-grid" id="shop-weapons"></div>
   <div class="shop-sec">🧰 Trang bị hỗ trợ (mua 1 lần, hiệu lực vĩnh viễn, hiện trên người Rubi)</div>
@@ -469,16 +480,16 @@ function makeCatPet() {
   return g;
 }
 const PET_DEFS = [
-  { id: 'mochi', name: 'Mochi', kind: 'Blob xanh mềm', rarity: 'Thường', colorCss: '#57b6ff', color: 0x57b6ff, hp: 50, decoy: 0.35, zap: 5, fly: false, perk: 'Hồi 1 máu mỗi 4 giây cho chủ', build: makeMochiPet },
-  { id: 'farmer', name: 'Robo Nông Dân', kind: 'Robot đội K Team', rarity: 'Thường', colorCss: '#e6bc4a', color: 0xe6bc4a, hp: 55, decoy: 0.4, zap: 5, fly: false, perk: 'Địch rơi vật phẩm hồi máu thường xuyên hơn', build: () => makeRoboPet(0xc9a86a, 'farmer') },
-  { id: 'chef', name: 'Robo Đầu Bếp', kind: 'Robot đội K Team', rarity: 'Thường', colorCss: '#f5f7ff', color: 0xf5f7ff, hp: 55, decoy: 0.4, zap: 5, fly: false, perk: 'Nam châm: nhặt vật phẩm từ xa gấp đôi', build: () => makeRoboPet(0xf0f2f7, 'chef') },
-  { id: 'rai', name: 'RAI', kind: 'Bạch tuộc cam', rarity: 'Hiếm', colorCss: '#ff7f24', color: 0xff7f24, hp: 65, decoy: 0.45, zap: 8, fly: true, perk: '+7% tốc độ bắn cho chủ, tia hỗ trợ mạnh', build: makeRAIPet },
-  { id: 'medic', name: 'Robo Y Tế', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#ff5964', color: 0xff5964, hp: 65, decoy: 0.4, zap: 6, fly: false, perk: 'Hồi 15 máu mỗi khi qua wave mới', build: () => makeRoboPet(0xf0f2f7, 'medic') },
-  { id: 'fire', name: 'Robo Cứu Hỏa', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#ff7a29', color: 0xff7a29, hp: 70, decoy: 0.45, zap: 6, fly: false, perk: 'Đốt địch đứng gần pet (4 dmg/giây)', build: () => makeRoboPet(0xd84e0c, 'fire') },
-  { id: 'pirate', name: 'Robo Hải Tặc', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#b08954', color: 0xb08954, hp: 65, decoy: 0.4, zap: 7, fly: false, perk: '+10% điểm số mọi pha hạ địch', build: () => makeRoboPet(0x8a6844, 'pirate') },
-  { id: 'meo', name: 'Mèo Mun', kind: 'Mèo đen cool ngầu', rarity: 'Epic', colorCss: '#9fd8ff', color: 0x9fd8ff, hp: 80, decoy: 0.5, zap: 8, fly: false, perk: '+8% tốc độ chạy cho chủ', build: makeCatPet },
-  { id: 'astro', name: 'Robo Phi Hành', kind: 'Robot đội K Team', rarity: 'Epic', colorCss: '#ffb52e', color: 0xffb52e, hp: 80, decoy: 0.45, zap: 9, fly: true, perk: 'Dash hồi nhanh hơn 20%', build: () => makeRoboPet(0xf5f7ff, 'astro') },
-  { id: 'hero', name: 'Robo Siêu Anh Hùng', kind: 'Robot đội K Team', rarity: 'Epic', colorCss: '#ffc21c', color: 0xffc21c, hp: 90, decoy: 0.68, zap: 10, fly: false, perk: 'Chim mồi thượng hạng: địch ưu tiên đuổi theo pet', build: () => makeRoboPet(0xe8212f, 'hero') },
+  { id: 'mochi', name: 'Mochi', kind: 'Blob xanh mềm', rarity: 'Thường', colorCss: '#57b6ff', color: 0x57b6ff, hp: 60, decoy: 0.35, atk: 5, def: 0.05, rate: 2.4, fly: false, perk: 'Hồi 1 máu mỗi 4 giây cho chủ', build: makeMochiPet },
+  { id: 'farmer', name: 'Robo Nông Dân', kind: 'Robot đội K Team', rarity: 'Thường', colorCss: '#e6bc4a', color: 0xe6bc4a, hp: 70, decoy: 0.4, atk: 6, def: 0.10, rate: 2.4, fly: false, perk: 'Địch rơi vật phẩm hồi máu thường xuyên hơn', build: () => makeRoboPet(0xc9a86a, 'farmer') },
+  { id: 'chef', name: 'Robo Đầu Bếp', kind: 'Robot đội K Team', rarity: 'Thường', colorCss: '#f5f7ff', color: 0xf5f7ff, hp: 70, decoy: 0.4, atk: 6, def: 0.10, rate: 2.2, fly: false, perk: 'Nam châm: nhặt vật phẩm từ xa gấp đôi', build: () => makeRoboPet(0xf0f2f7, 'chef') },
+  { id: 'rai', name: 'RAI', kind: 'Bạch tuộc cam', rarity: 'Hiếm', colorCss: '#ff7f24', color: 0xff7f24, hp: 80, decoy: 0.45, atk: 9, def: 0.15, rate: 2.0, fly: true, perk: '+7% tốc độ bắn cho chủ, tia hỗ trợ mạnh', build: makeRAIPet },
+  { id: 'medic', name: 'Robo Y Tế', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#ff5964', color: 0xff5964, hp: 90, decoy: 0.4, atk: 7, def: 0.20, rate: 2.2, fly: false, perk: 'Hồi 15 máu mỗi khi qua wave mới', build: () => makeRoboPet(0xf0f2f7, 'medic') },
+  { id: 'fire', name: 'Robo Cứu Hỏa', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#ff7a29', color: 0xff7a29, hp: 95, decoy: 0.45, atk: 8, def: 0.25, rate: 2.2, fly: false, perk: 'Đốt địch đứng gần pet (4 dmg/giây)', build: () => makeRoboPet(0xd84e0c, 'fire') },
+  { id: 'pirate', name: 'Robo Hải Tặc', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#b08954', color: 0xb08954, hp: 85, decoy: 0.4, atk: 8, def: 0.15, rate: 2.1, fly: false, perk: '+10% điểm số mọi pha hạ địch', build: () => makeRoboPet(0x8a6844, 'pirate') },
+  { id: 'meo', name: 'Mèo Mun', kind: 'Mèo đen cool ngầu', rarity: 'Epic', colorCss: '#9fd8ff', color: 0x9fd8ff, hp: 100, decoy: 0.5, atk: 9, def: 0.20, rate: 2.0, fly: false, perk: '+8% tốc độ chạy cho chủ', build: makeCatPet },
+  { id: 'astro', name: 'Robo Phi Hành', kind: 'Robot đội K Team', rarity: 'Epic', colorCss: '#ffb52e', color: 0xffb52e, hp: 105, decoy: 0.45, atk: 10, def: 0.25, rate: 1.9, fly: true, perk: 'Dash hồi nhanh hơn 20%', build: () => makeRoboPet(0xf5f7ff, 'astro') },
+  { id: 'hero', name: 'Robo Siêu Anh Hùng', kind: 'Robot đội K Team', rarity: 'Epic', colorCss: '#ffc21c', color: 0xffc21c, hp: 130, decoy: 0.68, atk: 12, def: 0.35, rate: 1.8, fly: false, perk: 'Chim mồi thượng hạng: địch ưu tiên đuổi theo pet', build: () => makeRoboPet(0xe8212f, 'hero') },
 ];
 const petById = id => PET_DEFS.find(p => p.id === id) || PET_DEFS[0];
 function rollPet(score) {
@@ -966,16 +977,20 @@ function offerUpgrades() {
   $('upgrade-tip').innerHTML = `⭐ <b>Gợi ý: ${pool[rec.idx].name}</b> — ${rec.reason}`;
   $('upgrade-cards').innerHTML = pool.map((u, i) => `<div class="card ${i === rec.idx ? 'rec' : ''}" data-i="${i}">${i === rec.idx ? '<div class="rec-badge">⭐ GỢI Ý</div>' : ''}<div class="icon">${UICONS[u.svg]}</div><div class="name">${u.name}</div><div class="desc">${u.desc}</div><div class="key">${i + 1}</div></div>`).join('');
   document.querySelectorAll('#upgrade-cards .card').forEach(c => c.addEventListener('click', () => pickUpgrade(+c.dataset.i)));
+  $('touch').classList.remove('on'); // ẩn nút bắn/dash: chống chạm nhầm khi màn nâng cấp bật lên
+  offerUpgrades._at = performance.now();
   $('upgrade').classList.add('on');
   if (document.pointerLockElement) document.exitPointerLock();
 }
 function pickUpgrade(i) {
+  if (performance.now() - (offerUpgrades._at || 0) < 600) return; // khóa 0.6s đầu: cú bóp cò đang dở không chọn nhầm
   const u = (offerUpgrades._pool || [])[i]; if (!u || state.mode !== 'upgrade') return;
   u.apply(); SFX.upgrade();
   $('upgrade').classList.remove('on');
   state.mode = 'playing';
   updateHUD();
   startWave(state.wave + 1);
+  if (IS_TOUCH) $('touch').classList.add('on');
 }
 
 // ---------- Combat ----------
@@ -1049,7 +1064,7 @@ function setPet(id) {
 }
 function damagePet(n) {
   if (!pet.mesh || pet.down || state.mode !== 'playing') return;
-  pet.hp -= n; pet.hitFlash = 0.15;
+  pet.hp -= n * (1 - (pet.def.def || 0)); pet.hitFlash = 0.15; // phòng thủ giảm sát thương nhận vào
   burst(pet.mesh.position.clone().setY(1), 0xff5964, 5, 4, 0.35);
   if (pet.hp <= 0) {
     pet.hp = 0; pet.down = true;
@@ -1086,13 +1101,13 @@ function updatePet(dt) {
   if (state.mode !== 'playing' || !player.alive) return;
   pet.zapT -= dt;
   if (pet.zapT <= 0) {
-    pet.zapT = 2.2;
+    pet.zapT = pet.def.rate || 2.2;
     let nd = 8.5, ne = null;
     for (const e of enemies) { const d = e.mesh.position.distanceTo(pm.position); if (d < nd) { nd = d; ne = e; } }
     if (ne) {
       const from = pm.position.clone(); from.y += 1.1;
       const dir = ne.mesh.position.clone(); dir.y = 1.2 * ne.mesh.scale.y; dir.sub(from).normalize();
-      spawnBullet(from, dir, pet.def.zap, null, pet.def.color);
+      spawnBullet(from, dir, pet.def.atk, null, pet.def.color);
       beep(920, 0.06, 'sine', 0.035);
     }
   }
@@ -1121,12 +1136,13 @@ function toast(msg) {
 function refreshLoadout() {
   $('loadout-text').textContent = `🔫 ${weaponById(save.weapon).name} · 🐾 ${petById(activePetId).name}`;
   const pet = petById(activePetId);
-  $('pet-line').innerHTML = `🐾 Pet đồng hành: <b>${pet.name}</b> (${pet.rarity} · ${pet.kind}) — ${pet.perk}` + (save.pendingPet ? `<br>🎁 Pet ván tới đã quay được: <b>${petById(save.pendingPet).name}</b>` : '');
+  $('pet-line').innerHTML = `🐾 Pet đồng hành: <b>${pet.name}</b> (${pet.rarity} · ${pet.kind}) — ${pet.perk}<br>⚔️ Tấn công ${pet.atk} · 🛡️ Phòng thủ ${Math.round(pet.def * 100)}% · ❤️ Sức lực ${pet.hp}` + (save.pendingPet ? `<br>🎁 Pet ván tới đã quay được: <b>${petById(save.pendingPet).name}</b>` : '');
 }
 function renderShop() {
   $('shop-credits').textContent = '💰 ' + save.credits.toLocaleString('vi-VN') + ' điểm tích lũy';
   const pet = petById(activePetId);
   $('shop-loadout').innerHTML = `Đang trang bị: <b>🔫 ${weaponById(save.weapon).name}</b> · Pet: <b>${pet.name}</b> (${pet.rarity}) — ${pet.perk}<br>Điểm ván trước: <b>${save.lastScore.toLocaleString('vi-VN')}</b> · Điểm tích lũy mua đồ: <b>${save.credits.toLocaleString('vi-VN')}</b>`;
+  $('shop-pet').innerHTML = petStatHTML(pet);
   $('shop-weapons').innerHTML = WEAPONS.map(w => {
     const owned = save.weapons.includes(w.id), eq = save.weapon === w.id;
     const btn = eq ? '<button class="equipped" disabled>✓ ĐANG DÙNG</button>'
@@ -1143,6 +1159,14 @@ function renderShop() {
   document.querySelectorAll('[data-buyw]').forEach(b => b.addEventListener('click', () => buyWeapon(b.dataset.buyw)));
   document.querySelectorAll('[data-equip]').forEach(b => b.addEventListener('click', () => equipWeapon(b.dataset.equip)));
   document.querySelectorAll('[data-buyg]').forEach(b => b.addEventListener('click', () => buyGear(b.dataset.buyg)));
+}
+function petStatHTML(def) {
+  const bar = (lb, val, max, txt, color) => `<div class="stat-row"><span class="lb">${lb}</span><div class="tr"><div class="fl" style="width:${Math.min(100, Math.round(val / max * 100))}%;background:${color}"></div></div><span class="vl">${txt}</span></div>`;
+  return `<div class="ph">🐾 ${def.name} <span>· ${def.rarity} · ${def.kind}</span></div>` +
+    bar('⚔️ Tấn công', def.atk, 14, def.atk + '/tia', '#ff8a2a') +
+    bar('🛡️ Phòng thủ', def.def, 0.4, '-' + Math.round(def.def * 100) + '% dmg', '#37e0ff') +
+    bar('❤️ Sức lực', def.hp, 140, def.hp + ' HP', '#2bff88') +
+    `<div style="font-size:12px;color:#9fb2e8;margin-top:8px">Đặc tính: ${def.perk} · Tốc độ ra đòn: mỗi ${def.rate}s · Mồi nhử: ${Math.round(def.decoy * 100)}% địch đổi mục tiêu</div>`;
 }
 function buyWeapon(id) {
   const w = weaponById(id);
@@ -1348,6 +1372,7 @@ function animate() {
     player.dashTime = Math.max(0, player.dashTime - dt);
     player.invuln = Math.max(0, player.invuln - dt);
     $('dash-fill').style.width = (100 - player.dashCd / (2.2 * (player.dashRate || 1)) * 100) + '%';
+    if (pet.def) $('pet-hud').textContent = pet.down ? `🐾 ${pet.def.name} đang ngã — hồi sinh wave sau` : `🐾 ${pet.def.name} · ❤️ ${Math.max(0, Math.ceil(pet.hp))}/${pet.maxHp}`;
     player.mesh.traverse(o => { if (o.material === M.red) o.material.emissive = new THREE.Color(player.invuln > 0 ? 0x336677 : 0x000000); });
 
     // --- bắn ---
