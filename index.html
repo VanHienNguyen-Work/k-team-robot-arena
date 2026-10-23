@@ -73,17 +73,26 @@
   #gameover-stats{margin-top:14px;font-size:17px;line-height:1.7;color:#dbe4ff}
   #gameover-stats b{color:#fff;font-size:21px}
   /* ---------- Upgrade ---------- */
-  #upgrade{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(3,5,12,.72);padding:18px}
+  #upgrade{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(3,5,12,.78);padding:16px 12px}
   #upgrade.on{display:flex}
-  #upgrade h2{font-size:clamp(24px,5vw,38px);font-weight:900;letter-spacing:.03em}
-  #upgrade p{color:#c9d4ff;margin-top:6px;font-size:15px}
-  #upgrade-cards{display:flex;gap:14px;margin-top:24px;flex-wrap:wrap;justify-content:center}
-  .card{pointer-events:auto;cursor:pointer;width:200px;background:linear-gradient(170deg,rgba(38,44,80,.95),rgba(14,17,36,.95));border:2px solid var(--line);border-radius:18px;padding:20px 16px;text-align:center;transition:all .13s}
-  .card:hover{border-color:var(--gold);transform:translateY(-5px);box-shadow:0 16px 34px rgba(0,0,0,.5)}
-  .card .icon{font-size:40px}
-  .card .name{font-size:17px;font-weight:900;margin-top:9px}
-  .card .desc{font-size:13px;color:#b9c6f5;margin-top:6px;line-height:1.45}
-  .card .key{margin-top:11px;font-size:11px;color:#8fa0d8;font-weight:800;letter-spacing:.1em}
+  #upgrade h2{font-size:clamp(19px,4.4vw,26px);font-weight:900;letter-spacing:.03em}
+  #upgrade p{color:#c9d4ff;margin-top:4px;font-size:12.5px}
+  #upgrade-context{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px;max-width:94vw}
+  #upgrade-context .chip{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:99px;padding:4px 11px;font-size:11.5px;font-weight:700;color:#dbe4ff}
+  #upgrade-context .chip.warn{border-color:rgba(255,70,85,.6);color:#ffb3ba}
+  #upgrade-context .chip.boss{border-color:var(--gold);color:var(--gold)}
+  #upgrade-tip{margin-top:9px;font-size:12.5px;color:#ffe9a8;background:rgba(255,194,28,.1);border:1px solid rgba(255,194,28,.35);border-radius:10px;padding:7px 13px;max-width:min(94vw,520px);text-align:center;line-height:1.5}
+  #upgrade-tip b{color:var(--gold)}
+  #upgrade-cards{display:flex;gap:8px;margin-top:14px;flex-wrap:nowrap;justify-content:center;width:min(94vw,520px)}
+  .card{position:relative;pointer-events:auto;cursor:pointer;flex:1 1 0;min-width:0;background:linear-gradient(170deg,rgba(38,44,80,.96),rgba(14,17,36,.96));border:1.5px solid var(--line);border-radius:14px;padding:12px 7px 10px;text-align:center;transition:all .13s;display:flex;flex-direction:column;align-items:center}
+  .card:hover{border-color:var(--gold);transform:translateY(-3px);box-shadow:0 10px 22px rgba(0,0,0,.5)}
+  .card.rec{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 8px 26px rgba(255,194,28,.22)}
+  .card .rec-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#ffd94d,#f5a623);color:#231a02;font-size:9.5px;font-weight:900;letter-spacing:.06em;padding:3px 9px;border-radius:99px;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.4)}
+  .card .icon{width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.16),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center}
+  .card .icon svg{width:34px;height:34px}
+  .card .name{font-size:13px;font-weight:900;margin-top:8px;line-height:1.25}
+  .card .desc{font-size:10.5px;color:#aebcf2;margin-top:4px;line-height:1.45;flex-grow:1}
+  .card .key{margin-top:8px;width:19px;height:19px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);font-size:10.5px;color:#c9d4ff;font-weight:800;display:flex;align-items:center;justify-content:center}
   /* ---------- Touch controls ---------- */
   #touch{position:fixed;inset:0;z-index:6;pointer-events:none;display:none}
   #touch.on{display:block}
@@ -166,6 +175,8 @@
 <div id="upgrade">
   <h2>⬆ WAVE HOÀN THÀNH!</h2>
   <p>Chọn 1 nâng cấp cho Rubi trước wave tiếp theo</p>
+  <div id="upgrade-context"></div>
+  <div id="upgrade-tip"></div>
   <div id="upgrade-cards"></div>
 </div>
 
@@ -884,20 +895,76 @@ function showBanner(big, small) {
 
 // ---------- Upgrades ----------
 const UPGRADES = [
-  { icon: '💥', name: 'Đạn Hạng Nặng', desc: '+30% sát thương mỗi phát bắn', apply() { player.dmg *= 1.3; } },
-  { icon: '⚡', name: 'Bắn Liên Thanh', desc: '+22% tốc độ bắn', apply() { player.fireRate *= 0.82; } },
-  { icon: '❤️', name: 'Khung Hợp Kim', desc: '+30 máu tối đa và hồi đầy 40 máu', apply() { player.maxHp += 30; heal(40); } },
-  { icon: '👟', name: 'Động Cơ Tia Lửa', desc: '+12% tốc độ chạy, dash hồi nhanh hơn 30%', apply() { player.speed *= 1.12; player.dashRate = (player.dashRate || 1) * 0.7; } },
-  { icon: '🎯', name: 'Đạn Xuyên Giáp', desc: '+18% sát thương, +10% tốc độ bắn', apply() { player.dmg *= 1.18; player.fireRate *= 0.9; } },
-  { icon: '🛡️', name: 'Lớp Giáp Rubi', desc: '+20 máu tối đa và hồi đầy máu', apply() { player.maxHp += 20; heal(player.maxHp); } },
+  { id: 'heavy', cat: 'dmg', svg: 'bomb', name: 'Đạn Hạng Nặng', desc: '+30% sát thương mỗi phát bắn', apply() { player.dmg *= 1.3; } },
+  { id: 'rapid', cat: 'rate', svg: 'bolt', name: 'Bắn Liên Thanh', desc: '+22% tốc độ bắn', apply() { player.fireRate *= 0.82; } },
+  { id: 'frame', cat: 'tank', svg: 'heartshield', name: 'Khung Hợp Kim', desc: '+30 máu tối đa và hồi 40 máu', apply() { player.maxHp += 30; heal(40); } },
+  { id: 'engine', cat: 'speed', svg: 'chev', name: 'Động Cơ Tia Lửa', desc: '+12% tốc độ chạy, dash hồi nhanh hơn 30%', apply() { player.speed *= 1.12; player.dashRate = (player.dashRate || 1) * 0.7; } },
+  { id: 'pierce', cat: 'dmg', svg: 'target', name: 'Đạn Xuyên Giáp', desc: '+18% sát thương, +10% tốc độ bắn', apply() { player.dmg *= 1.18; player.fireRate *= 0.9; } },
+  { id: 'armorup', cat: 'heal', svg: 'shield', name: 'Lớp Giáp Rubi', desc: '+20 máu tối đa và hồi đầy máu', apply() { player.maxHp += 20; heal(player.maxHp); } },
 ];
+// Icon vẽ SVG theo đúng nội dung từng nâng cấp (thay emoji)
+const UICONS = {
+  bomb: '<svg viewBox="0 0 48 48"><defs><radialGradient id="ub1" cx="0.35" cy="0.3" r="0.9"><stop offset="0" stop-color="#5a6da8"/><stop offset="1" stop-color="#232c4e"/></radialGradient></defs><circle cx="22" cy="29" r="13" fill="url(#ub1)"/><rect x="28" y="12" width="5" height="7" rx="2" transform="rotate(38 30 15)" fill="#8b98c9"/><path d="M37 4l1.6 4.2L43 6.4l-2.6 3.8 4 2-4.6 1-0.4 4.6-2.6-3.8-4.2 2 2-4.2L31 8.6l4.4-0.6z" fill="#ff8a2a" stroke="#ffd94d" stroke-width="1.4"/><circle cx="17" cy="24" r="3.4" fill="#ffffff" opacity="0.35"/></svg>',
+  bolt: '<svg viewBox="0 0 48 48"><defs><linearGradient id="ub2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe97a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs><path d="M27 3 L11 27 h8.5 L16 45 L35 19 h-9.5 z" fill="url(#ub2)" stroke="#b45309" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  heartshield: '<svg viewBox="0 0 48 48"><defs><linearGradient id="ub3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb02e"/><stop offset="1" stop-color="#e07b00"/></linearGradient></defs><path d="M24 4 L41 9.5 V22 C41 33.5 33.8 40.8 24 45 C14.2 40.8 7 33.5 7 22 V9.5 Z" fill="url(#ub3)" stroke="#92580a" stroke-width="1.6"/><path d="M24 35.5 C15 29.5 12.6 24.6 12.6 20.6 C12.6 17.2 15.2 15 18.1 15 C20.4 15 22.8 16.4 24 18.6 C25.2 16.4 27.6 15 29.9 15 C32.8 15 35.4 17.2 35.4 20.6 C35.4 24.6 33 29.5 24 35.5 Z" fill="#e8212f" stroke="#ffffff" stroke-width="1.6"/></svg>',
+  chev: '<svg viewBox="0 0 48 48"><path d="M6 13 L17 24 L6 35" fill="none" stroke="#37e0ff" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/><path d="M19 13 L30 24 L19 35" fill="none" stroke="#37e0ff" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/><path d="M32 13 L43 24 L32 35" fill="none" stroke="#a5f3ff" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  target: '<svg viewBox="0 0 48 48"><circle cx="21" cy="27" r="16" fill="#f4f6ff"/><circle cx="21" cy="27" r="11" fill="#e8212f"/><circle cx="21" cy="27" r="6" fill="#f4f6ff"/><circle cx="21" cy="27" r="2.6" fill="#e8212f"/><path d="M30 18 L45 3" stroke="#37e0ff" stroke-width="3.4" stroke-linecap="round"/><path d="M45 3 l-7.5 1.2 M45 3 l-1.2 7.5" stroke="#37e0ff" stroke-width="3" stroke-linecap="round"/></svg>',
+  shield: '<svg viewBox="0 0 48 48"><defs><linearGradient id="ub6" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5b47"/><stop offset="1" stop-color="#c40f1e"/></linearGradient></defs><path d="M24 4 L41 9.5 V22 C41 33.5 33.8 40.8 24 45 C14.2 40.8 7 33.5 7 22 V9.5 Z" fill="url(#ub6)" stroke="#7c0a14" stroke-width="1.6"/><path d="M24 14 v16 M16 22 h16" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/></svg>',
+};
 function heal(n) { player.hp = Math.min(player.maxHp, player.hp + n); }
+// Gợi ý nâng cấp theo BỐI CẢNH hiện tại: wave sắp tới (số địch/boss), thể trạng máu, súng đang dùng, pet
+function recommendUpgrade(pool) {
+  const nextWave = state.wave + 1;
+  const total = waveComp(nextWave).length;
+  const bossNext = nextWave % 5 === 0;
+  const hpR = player.hp / player.maxHp;
+  const hpPct = Math.round(hpR * 100);
+  const w = player.baseWeapon || WEAPONS[0];
+  let best = { idx: 0, score: -1, reason: '' };
+  pool.forEach((u, i) => {
+    let sc = 10; const reasons = [];
+    if (u.cat === 'heal') {
+      if (hpR < 0.45) { sc += 70; reasons.push(`máu chỉ còn ${hpPct}% — hồi đầy ngay để sống sót qua Wave ${nextWave}`); }
+      else if (hpR < 0.7) { sc += 34; reasons.push(`máu đang ở ${hpPct}% — hồi đầy cho chắc trước wave mới`); }
+      else { sc += 8; reasons.push('máu đang khỏe, hồi đầy là phương án an toàn'); }
+    }
+    if (u.cat === 'tank') {
+      if (bossNext) { sc += 46; reasons.push(`Wave ${nextWave} có BOSS — thêm máu tối đa để trụ đòn`); }
+      if (hpR < 0.6) { sc += 26; reasons.push(`máu thấp (${hpPct}%) — vừa tăng máu tối đa vừa hồi 40`); }
+      else if (hpR >= 0.85) { sc += 20; reasons.push('máu đang đầy — đầu tư máu tối đa cho chặng dài'); }
+    }
+    if (u.cat === 'dmg') {
+      if (bossNext) { sc += 52; reasons.push('BOSS sắp tới máu rất trâu — cần sát thương để hạ nhanh trước khi bị dồn đòn'); }
+      if (nextWave >= 8) { sc += 18; reasons.push(`từ Wave ${nextWave} địch trâu dần — sát thương cao giúp giữ nhịp`); }
+      if (w.id === 'storm') { sc += 14; reasons.push('Bão Lửa bắn nhanh nhưng dmg nhỏ — cộng sát thương là hợp nhất'); }
+    }
+    if (u.cat === 'rate') {
+      if (total >= 9) { sc += 42; reasons.push(`Wave ${nextWave} có tới ${total} địch — tốc độ bắn giúp dọn đàn nhanh`); }
+      if (w.rate >= 0.25) { sc += 36; reasons.push(`${w.name} bắn khá chậm — tăng tốc bắn bù lại rõ rệt`); }
+      if (bossNext) { sc += 12; reasons.push('bắn nhanh hơn cũng giúp đè DPS lên BOSS'); }
+    }
+    if (u.cat === 'speed') {
+      if (hpR < 0.35) { sc += 38; reasons.push(`máu nguy cấp (${hpPct}%) — cơ động để né đòn và giữ khoảng cách`); }
+      if (pet.mesh && pet.down) { sc += 24; reasons.push('pet đang ngã, không còn mồi nhử — bạn cần tự cơ động nhiều hơn'); }
+      if (total >= 10) { sc += 14; reasons.push('địch đông — chạy nhanh giữ vị trí tốt hơn'); }
+    }
+    if (sc > best.score) best = { idx: i, score: sc, reason: reasons[0] || 'lựa chọn cân bằng cho wave tới' };
+  });
+  return { ...best, nextWave, total, bossNext, hpPct };
+}
 function offerUpgrades() {
   setLockUI(null); state.lockTarget = null;
   state.mode = 'upgrade';
   const pool = [...UPGRADES].sort(() => Math.random() - 0.5).slice(0, 3);
   offerUpgrades._pool = pool;
-  $('upgrade-cards').innerHTML = pool.map((u, i) => `<div class="card" data-i="${i}"><div class="icon">${u.icon}</div><div class="name">${u.name}</div><div class="desc">${u.desc}</div><div class="key">PHÍM ${i + 1} / CHẠM ĐỂ CHỌN</div></div>`).join('');
+  const rec = recommendUpgrade(pool);
+  $('upgrade-context').innerHTML =
+    `<span class="chip ${rec.bossNext ? 'boss' : ''}">🌊 Wave ${rec.nextWave}${rec.bossNext ? ' · 👹 CÓ BOSS' : ''} · ${rec.total} địch</span>` +
+    `<span class="chip ${rec.hpPct < 45 ? 'warn' : ''}">❤️ Máu ${Math.ceil(player.hp)}/${player.maxHp} (${rec.hpPct}%)</span>` +
+    `<span class="chip">🔫 ${weaponById(save.weapon).name}</span>` +
+    (pet.mesh && pet.def ? `<span class="chip ${pet.down ? 'warn' : ''}">🐾 ${pet.down ? pet.def.name + ' đang ngã' : 'Pet: ' + pet.def.name}</span>` : '');
+  $('upgrade-tip').innerHTML = `⭐ <b>Gợi ý: ${pool[rec.idx].name}</b> — ${rec.reason}`;
+  $('upgrade-cards').innerHTML = pool.map((u, i) => `<div class="card ${i === rec.idx ? 'rec' : ''}" data-i="${i}">${i === rec.idx ? '<div class="rec-badge">⭐ GỢI Ý</div>' : ''}<div class="icon">${UICONS[u.svg]}</div><div class="name">${u.name}</div><div class="desc">${u.desc}</div><div class="key">${i + 1}</div></div>`).join('');
   document.querySelectorAll('#upgrade-cards .card').forEach(c => c.addEventListener('click', () => pickUpgrade(+c.dataset.i)));
   $('upgrade').classList.add('on');
   if (document.pointerLockElement) document.exitPointerLock();
@@ -1470,7 +1537,7 @@ if (AUTOTEST) {
     }
   }, 500);
 }
-window.KTEAM = { scene, state, player, enemies, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }), get save() { return save; }, pet, PET_DEFS, WEAPONS, GEAR, buyWeapon, buyGear, equipWeapon, setPet, rollPet, computeStats, openShop, damagePet };
+window.KTEAM = { scene, state, player, enemies, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }), get save() { return save; }, pet, PET_DEFS, WEAPONS, GEAR, buyWeapon, buyGear, equipWeapon, setPet, rollPet, computeStats, openShop, damagePet, offerUpgrades, recommendUpgrade };
 </script>
 </body>
 </html>
