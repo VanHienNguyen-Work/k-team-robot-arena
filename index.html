@@ -99,6 +99,33 @@
   #crosshair.locked::before,#crosshair.locked::after{background:var(--gold);box-shadow:0 0 9px var(--gold)}
   #btn-pause{position:fixed;top:86px;right:12px;z-index:7;width:42px;height:42px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:#fff;font-size:17px;display:none;pointer-events:auto;cursor:pointer}
   #btn-pause.on{display:block}
+  #loadout-text{font-size:11px;color:#9be9ff;font-weight:700;margin-top:3px}
+  #pet-line{margin-top:8px;font-size:14.5px;color:#dbe4ff}
+  #pet-line b{color:var(--gold)}
+  /* ---------- Shop ---------- */
+  #shop{position:fixed;inset:0;z-index:20;display:none;background:rgba(3,5,12,.9);overflow-y:auto;padding:22px 14px 40px}
+  #shop.on{display:block}
+  #shop-inner{max-width:860px;margin:0 auto}
+  #shop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  #shop-head h2{font-size:clamp(24px,5vw,36px);font-weight:900}
+  #shop-credits{font-size:17px;font-weight:900;color:var(--gold);background:rgba(255,194,28,.12);border:1px solid rgba(255,194,28,.45);padding:8px 16px;border-radius:99px}
+  #shop-close{pointer-events:auto;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid var(--line);color:#fff;font-size:15px;font-weight:800;padding:9px 18px;border-radius:99px}
+  #shop-loadout{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:14px;line-height:1.6;color:#dbe4ff}
+  #shop-loadout b{color:#fff}
+  .shop-sec{margin-top:22px;font-size:19px;font-weight:900;letter-spacing:.03em}
+  .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:12px}
+  .item{background:linear-gradient(170deg,rgba(38,44,80,.95),rgba(14,17,36,.95));border:2px solid var(--line);border-radius:16px;padding:16px 14px;text-align:left}
+  .item.equipped{border-color:var(--gold)}
+  .item .ic{font-size:34px}
+  .item .nm{font-size:16px;font-weight:900;margin-top:7px}
+  .item .ds{font-size:12.5px;color:#b9c6f5;margin-top:5px;line-height:1.5;min-height:56px}
+  .item .pr{font-size:14px;font-weight:900;color:var(--gold);margin-top:6px}
+  .item button{pointer-events:auto;cursor:pointer;margin-top:9px;width:100%;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:900;background:linear-gradient(180deg,#ff4653,#c40f1e);color:#fff}
+  .item button.owned{background:rgba(55,224,255,.18);color:#9be9ff;border:1px solid rgba(55,224,255,.5)}
+  .item button.equipped{background:rgba(255,194,28,.2);color:var(--gold);border:1px solid var(--gold)}
+  .item button:disabled{opacity:.45;cursor:not-allowed}
+  #toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);z-index:30;background:rgba(10,14,30,.92);border:1px solid var(--gold);color:#fff;font-weight:800;font-size:14.5px;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:all .25s;max-width:88vw;text-align:center}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
   @media (max-width:640px){ #hint{display:none} #wave-panel{display:none} }
 </style>
 </head>
@@ -114,7 +141,7 @@
       <div id="dash-row"><span>DASH</span><div id="dash-bar"><div id="dash-fill"></div></div><span style="color:#7d8fc9">SHIFT</span></div>
     </div>
     <div class="panel" id="wave-panel"><div class="wave" id="wave-text">WAVE 1</div><div class="left" id="left-text">Địch còn: 0</div></div>
-    <div class="panel" id="stats-panel"><div class="score" id="score-text">0</div><div class="sub" id="best-text">Kỷ lục: 0</div></div>
+    <div class="panel" id="stats-panel"><div class="score" id="score-text">0</div><div class="sub" id="best-text">Kỷ lục: 0</div><div id="loadout-text">🔫 Blaster Rubi</div></div>
   </div>
   <div id="combo">x2 COMBO</div>
   <div id="crosshair"></div>
@@ -149,6 +176,8 @@
   <p class="tagline">Đàn robot nổi loạn đã chiếm đấu trường! Điều khiển <b>Rubi</b> — robot đỏ tươi của K Team — sống sót qua từng đợt tấn công, hạ <b>Boss mỗi 5 wave</b> và leo kỷ lục điểm.</p>
   <button class="btn" id="btn-start">▶ Vào đấu trường</button>
   <button class="btn ghost" id="btn-autoaim-menu" style="margin-top:12px">🎯 Tâm bắn tự động: BẬT</button>
+  <button class="btn ghost" id="btn-shop-menu" style="margin-top:10px">🛒 Cửa hàng trang bị</button>
+  <div id="pet-line"></div>
   <div id="best-line"></div>
   <div class="controls">
     <div class="ctl"><b>W A S D</b>Di chuyển</div>
@@ -166,6 +195,7 @@
   <h1 class="title">RUBI <em>NGÃ XUỐNG!</em></h1>
   <div id="gameover-stats"></div>
   <button class="btn" id="btn-restart">↻ Chơi lại</button>
+  <button class="btn ghost" id="btn-shop-over" style="margin-top:10px">🛒 Cửa hàng trang bị</button>
   <button class="btn ghost" id="btn-tomenu">Về menu</button>
 </div>
 
@@ -175,6 +205,18 @@
   <button class="btn" id="btn-resume">▶ Tiếp tục</button>
   <button class="btn ghost" id="btn-quit">Thoát về menu</button>
 </div>
+
+<div id="toast"></div>
+<!-- Shop -->
+<div id="shop"><div id="shop-inner">
+  <div id="shop-head"><h2>🛒 CỬA HÀNG TRANG BỊ</h2><div id="shop-credits">💰 0 điểm</div><button id="shop-close">✕ Đóng</button></div>
+  <div id="shop-loadout"></div>
+  <div class="shop-sec">🔫 Vũ khí (bấm để trang bị — súng đổi hình ngay trong trận)</div>
+  <div class="shop-grid" id="shop-weapons"></div>
+  <div class="shop-sec">🧰 Trang bị hỗ trợ (mua 1 lần, hiệu lực vĩnh viễn, hiện trên người Rubi)</div>
+  <div class="shop-grid" id="shop-gear"></div>
+  <p style="margin-top:18px;font-size:13px;color:#8fa0d8;line-height:1.6">💡 Điểm trong mỗi ván sẽ cộng vào <b style="color:#ffc21c">điểm tích lũy</b> khi ván kết thúc — dùng điểm đó để mua đồ. Điểm ván càng cao, pet nhận được cho ván sau càng hiếm!</p>
+</div></div>
 
 <div id="autotest-result" style="display:none"></div>
 
@@ -302,6 +344,143 @@ function chestTexture() {
   return t;
 }
 
+
+// ============================================================
+//  LƯU TRỮ / CỬA HÀNG / PET — điểm tích lũy, trang bị, thú cưng
+// ============================================================
+const SAVE_KEY = 'kteam-save-v1';
+let save = { credits: 0, weapons: ['blaster'], weapon: 'blaster', gear: [], pendingPet: null, lastScore: 0 };
+try { const raw = localStorage.getItem(SAVE_KEY); if (raw) save = Object.assign(save, JSON.parse(raw)); } catch (e) { }
+function persistSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } }
+
+const WEAPONS = [
+  { id: 'blaster', name: 'Blaster Rubi', icon: '🔫', price: 0, dmg: 12, rate: 0.16, pellets: 1, spread: 0, color: 0xffd94d, size: 1, aoe: 0, desc: 'Súng chuẩn của Rubi. Cân bằng, tin cậy.' },
+  { id: 'dual', name: 'Song Tia Lửa', icon: '🔥', price: 800, dmg: 10, rate: 0.17, pellets: 2, spread: 0.045, color: 0xffa502, size: 1, aoe: 0, desc: 'Hai nòng bắn cùng lúc 2 tia — dọn đàn cực nhanh.' },
+  { id: 'plasma', name: 'Pháo Plasma', icon: '🔵', price: 1500, dmg: 27, rate: 0.27, pellets: 1, spread: 0, color: 0x37e0ff, size: 1.9, aoe: 0, desc: 'Đạn plasma to, sát thương lớn. Hợp trị Tank/Boss.' },
+  { id: 'storm', name: 'Bão Lửa Liên Thanh', icon: '🌪️', price: 2500, dmg: 9, rate: 0.075, pellets: 1, spread: 0.012, color: 0xff6b81, size: 0.9, aoe: 0, desc: 'Tốc độ bắn như mưa. DPS khủng khi bám mục tiêu.' },
+  { id: 'cannon', name: 'Cannon Hoàng Kim', icon: '💛', price: 4000, dmg: 40, rate: 0.38, pellets: 1, spread: 0, color: 0xffc21c, size: 2.4, aoe: 2.7, desc: 'Đạn nổ diện rộng — cả đàn bốc hơi. Chậm mà chắc.' },
+];
+const GEAR = [
+  { id: 'armor', name: 'Giáp Hợp Kim', icon: '🛡️', price: 600, desc: '+50 máu tối đa. Hiện khiên vàng trên ngực Rubi.' },
+  { id: 'gloves', name: 'Găng Tia Lửa', icon: '🧤', price: 700, desc: '+15% tốc độ bắn. Tay súng hóa vàng trong trận.' },
+  { id: 'boots', name: 'Giày Tốc Độ', icon: '👟', price: 700, desc: '+12% tốc độ chạy, dash hồi nhanh hơn 20%.' },
+  { id: 'scope', name: 'Kính Ngắm AI', icon: '🔭', price: 900, desc: 'Tầm khóa mục tiêu 52 → 62, nón auto-aim rộng hơn.' },
+  { id: 'core', name: 'Lõi Năng Lượng', icon: '🔆', price: 1200, desc: '+20% sát thương mọi vũ khí. Lõi ngực phát sáng.' },
+];
+const weaponById = id => WEAPONS.find(w => w.id === id) || WEAPONS[0];
+
+// ---------- Pet: 10 bé từ vũ trụ mascot của Ryan ----------
+function nameSprite(text, colorCss) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 56;
+  const g = c.getContext('2d');
+  g.font = '900 30px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 7; g.strokeStyle = 'rgba(5,6,16,0.85)'; g.strokeText(text, 128, 28);
+  g.fillStyle = colorCss; g.fillText(text, 128, 28);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false }));
+  sp.scale.set(2.3, 0.5, 1); sp.renderOrder = 98;
+  return sp;
+}
+function petEye(g, x, y, z, r = 0.09) { const e = sph(r, M.white, x, y, z); const p = sph(r * 0.5, M.black, x, y, z + r * 0.8); g.add(e, p); }
+function makeRoboPet(bodyColor, prop) {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.4, metalness: 0.35 });
+  g.add(box(0.3, 0.42, 0.3, M.redDark, -0.17, 0.21, 0));
+  g.add(box(0.3, 0.42, 0.3, M.redDark, 0.17, 0.21, 0));
+  g.add(box(0.78, 0.62, 0.55, bodyMat, 0, 0.72, 0));
+  g.add(box(0.22, 0.5, 0.22, bodyMat, -0.52, 0.75, 0));
+  g.add(box(0.22, 0.5, 0.22, bodyMat, 0.52, 0.75, 0));
+  const head = new THREE.Group(); head.position.y = 1.32;
+  head.add(box(0.66, 0.55, 0.58, bodyMat, 0, 0, 0));
+  head.add(box(0.54, 0.4, 0.06, M.black, 0, -0.02, 0.3));
+  const eye = new THREE.Mesh(new THREE.CircleGeometry(0.13, 20), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  eye.position.set(0, 0.03, 0.34); head.add(eye);
+  head.add(cyl(0.03, 0.03, 0.3, M.black, 0.18, 0.42, 0, 8));
+  head.add(sph(0.06, M.glowYellow, 0.18, 0.6, 0));
+  g.add(head);
+  if (prop === 'chef') { head.add(cyl(0.3, 0.3, 0.16, M.white, 0, 0.34, 0, 16)); head.add(sph(0.21, M.white, 0, 0.48, 0)); g.children[2].material = M.white; }
+  if (prop === 'hero') { const cape = box(0.7, 0.95, 0.05, new THREE.MeshStandardMaterial({ color: 0xb3001b, roughness: 0.7 }), 0, 0.85, -0.33); g.add(cape); g.add(box(0.8, 0.12, 0.57, M.gold, 0, 0.48, 0)); }
+  if (prop === 'astro') { const dome = new THREE.Mesh(new THREE.SphereGeometry(0.48, 20, 14), new THREE.MeshStandardMaterial({ color: 0xbfe9ff, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0.1 })); dome.position.y = 1.34; g.add(dome); g.add(box(0.5, 0.62, 0.24, new THREE.MeshStandardMaterial({ color: 0xff8c1a, roughness: 0.5 }), 0, 0.72, -0.4)); }
+  if (prop === 'pirate') { head.add(cyl(0.44, 0.46, 0.07, M.black, 0, 0.3, 0, 18)); head.add(cyl(0.3, 0.32, 0.18, M.black, 0, 0.4, 0, 14)); head.add(sph(0.05, M.gold, -0.36, -0.1, 0.1)); }
+  if (prop === 'medic') { const plate = box(0.6, 0.46, 0.05, M.white, 0, 0.74, 0.29); g.add(plate); g.add(box(0.3, 0.1, 0.06, new THREE.MeshBasicMaterial({ color: 0xe8212f }), 0, 0.74, 0.3, false)); g.add(box(0.1, 0.3, 0.06, new THREE.MeshBasicMaterial({ color: 0xe8212f }), 0, 0.74, 0.3, false)); }
+  if (prop === 'fire') { head.add(cyl(0.42, 0.44, 0.06, new THREE.MeshStandardMaterial({ color: 0xd43a00, roughness: 0.5 }), 0, 0.3, 0, 18)); head.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xe8510c, roughness: 0.5 })).translateY(0.3)); g.add(cyl(0.09, 0.09, 0.5, M.gun, 0.6, 0.6, 0.25, 10)).children; }
+  if (prop === 'farmer') { head.add(cyl(0.5, 0.52, 0.05, new THREE.MeshStandardMaterial({ color: 0xd9a83c, roughness: 0.8 }), 0, 0.3, 0, 18)); head.add(new THREE.Mesh(new THREE.SphereGeometry(0.27, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xe6bc4a, roughness: 0.8 })).translateY(0.3)); }
+  return g;
+}
+function makeRAIPet() {
+  const g = new THREE.Group();
+  const orange = new THREE.MeshStandardMaterial({ color: 0xff7f24, roughness: 0.55 });
+  const head = box(0.85, 0.72, 0.8, orange, 0, 0.95, 0); g.add(head);
+  g.add(box(0.7, 0.5, 0.06, M.black, 0, 0.92, 0.42));
+  const e1 = new THREE.Mesh(new THREE.CircleGeometry(0.09, 14), new THREE.MeshBasicMaterial({ color: 0xffffff })); e1.position.set(-0.16, 1.0, 0.46); g.add(e1);
+  const e2 = e1.clone(); e2.position.x = 0.16; g.add(e2);
+  g.add(box(0.95, 0.07, 0.9, new THREE.MeshStandardMaterial({ color: 0x1c2a4a, roughness: 0.5 }), 0, 1.36, 0));
+  g.add(box(0.4, 0.16, 0.4, new THREE.MeshStandardMaterial({ color: 0x1c2a4a, roughness: 0.5 }), 0, 1.44, 0));
+  g.add(cyl(0.025, 0.025, 0.22, M.gold, 0.22, 1.32, 0, 6));
+  const tents = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const t = cyl(0.07, 0.045, 0.5, orange, Math.cos(a) * 0.34, 0.35, Math.sin(a) * 0.34, 8);
+    t.rotation.z = Math.cos(a) * 0.5; t.rotation.x = -Math.sin(a) * 0.5;
+    g.add(t); tents.push(t);
+  }
+  g.userData.tents = tents;
+  return g;
+}
+function makeMochiPet() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x57b6ff, roughness: 0.35, transparent: true, opacity: 0.95 });
+  const body = sph(0.55, mat, 0, 0.62, 0); body.scale.set(1, 0.88, 0.95); g.add(body);
+  g.userData.body = body;
+  petEye(g, -0.2, 0.78, 0.42, 0.11); petEye(g, 0.2, 0.78, 0.42, 0.11);
+  g.add(box(0.16, 0.05, 0.03, M.black, 0.05, 0.55, 0.5, false));
+  g.add(sph(0.13, mat, -0.55, 0.55, 0.05)); g.add(sph(0.13, mat, 0.55, 0.55, 0.05));
+  const tongue = box(0.14, 0.1, 0.03, new THREE.MeshBasicMaterial({ color: 0xff8fb3 }), 0.14, 0.47, 0.5, false); g.add(tongue);
+  return g;
+}
+function makeCatPet() {
+  const g = new THREE.Group();
+  const fur = new THREE.MeshStandardMaterial({ color: 0x191b22, roughness: 0.65 });
+  const body = sph(0.52, fur, 0, 0.55, 0); body.scale.set(1, 0.92, 0.95); g.add(body);
+  const head = sph(0.42, fur, 0, 1.12, 0); g.add(head);
+  const earGeo = new THREE.ConeGeometry(0.16, 0.3, 4);
+  const e1 = new THREE.Mesh(earGeo, fur); e1.position.set(-0.26, 1.48, 0); e1.castShadow = true; g.add(e1);
+  const e2 = e1.clone(); e2.position.x = 0.26; g.add(e2);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x37b6ff });
+  g.add(sph(0.055, eyeMat, -0.16, 1.18, 0.38)); g.add(sph(0.055, eyeMat, 0.16, 1.18, 0.38));
+  g.add(sph(0.05, new THREE.MeshBasicMaterial({ color: 0xff8fb3 }), 0, 1.06, 0.4));
+  const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.09, 10, 22), new THREE.MeshStandardMaterial({ color: 0xe8212f, roughness: 0.6 }));
+  scarf.rotation.x = Math.PI / 2; scarf.position.y = 0.88; scarf.castShadow = true; g.add(scarf);
+  g.add(box(0.12, 0.12, 0.05, new THREE.MeshStandardMaterial({ color: 0x2b6cff, roughness: 0.5 }), 0.3, 0.82, 0.3));
+  const fish = sph(0.16, new THREE.MeshStandardMaterial({ color: 0xffb52e, roughness: 0.4 }), 0, 0.42, 0.48); fish.scale.set(1.3, 0.75, 0.6); g.add(fish);
+  const tail = cyl(0.05, 0.035, 0.55, fur, -0.45, 0.5, -0.3, 8); tail.rotation.z = 0.7; g.add(tail);
+  g.userData.tail = tail;
+  return g;
+}
+const PET_DEFS = [
+  { id: 'mochi', name: 'Mochi', kind: 'Blob xanh mềm', rarity: 'Thường', colorCss: '#57b6ff', color: 0x57b6ff, hp: 50, decoy: 0.35, zap: 5, fly: false, perk: 'Hồi 1 máu mỗi 4 giây cho chủ', build: makeMochiPet },
+  { id: 'farmer', name: 'Robo Nông Dân', kind: 'Robot đội K Team', rarity: 'Thường', colorCss: '#e6bc4a', color: 0xe6bc4a, hp: 55, decoy: 0.4, zap: 5, fly: false, perk: 'Địch rơi vật phẩm hồi máu thường xuyên hơn', build: () => makeRoboPet(0xc9a86a, 'farmer') },
+  { id: 'chef', name: 'Robo Đầu Bếp', kind: 'Robot đội K Team', rarity: 'Thường', colorCss: '#f5f7ff', color: 0xf5f7ff, hp: 55, decoy: 0.4, zap: 5, fly: false, perk: 'Nam châm: nhặt vật phẩm từ xa gấp đôi', build: () => makeRoboPet(0xf0f2f7, 'chef') },
+  { id: 'rai', name: 'RAI', kind: 'Bạch tuộc cam', rarity: 'Hiếm', colorCss: '#ff7f24', color: 0xff7f24, hp: 65, decoy: 0.45, zap: 8, fly: true, perk: '+7% tốc độ bắn cho chủ, tia hỗ trợ mạnh', build: makeRAIPet },
+  { id: 'medic', name: 'Robo Y Tế', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#ff5964', color: 0xff5964, hp: 65, decoy: 0.4, zap: 6, fly: false, perk: 'Hồi 15 máu mỗi khi qua wave mới', build: () => makeRoboPet(0xf0f2f7, 'medic') },
+  { id: 'fire', name: 'Robo Cứu Hỏa', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#ff7a29', color: 0xff7a29, hp: 70, decoy: 0.45, zap: 6, fly: false, perk: 'Đốt địch đứng gần pet (4 dmg/giây)', build: () => makeRoboPet(0xd84e0c, 'fire') },
+  { id: 'pirate', name: 'Robo Hải Tặc', kind: 'Robot đội K Team', rarity: 'Hiếm', colorCss: '#b08954', color: 0xb08954, hp: 65, decoy: 0.4, zap: 7, fly: false, perk: '+10% điểm số mọi pha hạ địch', build: () => makeRoboPet(0x8a6844, 'pirate') },
+  { id: 'meo', name: 'Mèo Mun', kind: 'Mèo đen cool ngầu', rarity: 'Epic', colorCss: '#9fd8ff', color: 0x9fd8ff, hp: 80, decoy: 0.5, zap: 8, fly: false, perk: '+8% tốc độ chạy cho chủ', build: makeCatPet },
+  { id: 'astro', name: 'Robo Phi Hành', kind: 'Robot đội K Team', rarity: 'Epic', colorCss: '#ffb52e', color: 0xffb52e, hp: 80, decoy: 0.45, zap: 9, fly: true, perk: 'Dash hồi nhanh hơn 20%', build: () => makeRoboPet(0xf5f7ff, 'astro') },
+  { id: 'hero', name: 'Robo Siêu Anh Hùng', kind: 'Robot đội K Team', rarity: 'Epic', colorCss: '#ffc21c', color: 0xffc21c, hp: 90, decoy: 0.68, zap: 10, fly: false, perk: 'Chim mồi thượng hạng: địch ưu tiên đuổi theo pet', build: () => makeRoboPet(0xe8212f, 'hero') },
+];
+const petById = id => PET_DEFS.find(p => p.id === id) || PET_DEFS[0];
+function rollPet(score) {
+  let w = { 'Thường': 50, 'Hiếm': 32, 'Epic': 18 };
+  if (score >= 3500) w = { 'Thường': 6, 'Hiếm': 30, 'Epic': 64 };
+  else if (score >= 2000) w = { 'Thường': 16, 'Hiếm': 38, 'Epic': 46 };
+  else if (score >= 800) w = { 'Thường': 34, 'Hiếm': 38, 'Epic': 28 };
+  let total = 0; const bag = [];
+  for (const p of PET_DEFS) { total += w[p.rarity]; bag.push([p, total]); }
+  const r = Math.random() * total;
+  return (bag.find(([, acc]) => r <= acc) || bag[0])[0];
+}
+
 // ---------- Arena ----------
 const obstacles = []; // {x,z,hx,hz}
 {
@@ -388,8 +567,25 @@ function makeRubi() {
   head.add(cyl(0.05, 0.05, 0.62, M.black, 0.3, 0.8, 0, 8));
   head.add(sph(0.13, M.glowYellow, 0.3, 1.14, 0));
   g.add(head);
-  g.userData = { legL, legR, armL, armR, head, gunTip: tip };
+  // --- trang bị mua trong shop: hiện/ẩn theo đồ đang sở hữu ---
+  const gearG = new THREE.Group();
+  const armorParts = [];
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xffc21c, roughness: 0.3, metalness: 0.75 });
+  for (const [x, y] of [[-0.62, 1.66], [0.62, 1.66]]) armorParts.push(box(0.1, 1.05, 0.1, frameMat, x, y, 0.52));
+  armorParts.push(box(1.34, 0.1, 0.1, frameMat, 0, 2.16, 0.52), box(1.34, 0.1, 0.1, frameMat, 0, 1.16, 0.52));
+  armorParts.push(sph(0.36, frameMat, -0.95, 2.14, 0), sph(0.36, frameMat, 0.95, 2.14, 0));
+  const bootsParts = [box(0.58, 0.13, 0.3, frameMat, -0.32, 0.12, 0.32), box(0.58, 0.13, 0.3, frameMat, 0.32, 0.12, 0.32)];
+  const scopePart = box(1.12, 0.2, 0.07, M.glowCyan, 0, 3.14, 0.57, false);
+  const corePart = sph(0.17, M.glowYellow, 0, 1.66, 0.56);
+  const gloveParts = [sph(0.23, frameMat, -0.95, 1.0, 0), sph(0.23, frameMat, 0.95, 1.0, 0)];
+  gearG.add(...armorParts, ...bootsParts, scopePart, corePart, ...gloveParts);
+  g.add(gearG);
+  g.userData = { legL, legR, armL, armR, head, gunTip: tip, gearParts: { armor: armorParts, boots: bootsParts, scope: [scopePart], core: [corePart], gloves: gloveParts } };
   return g;
+}
+function applyGearVisuals() {
+  const gp = player.mesh.userData.gearParts; if (!gp) return;
+  for (const key of Object.keys(gp)) for (const m of gp[key]) m.visible = save.gear.includes(key);
 }
 
 // ---------- Enemy builders ----------
@@ -478,11 +674,14 @@ function updateParticles(dt) {
 const bullets = [], enemyBullets = [];
 const bulletGeo = new THREE.SphereGeometry(0.13, 10, 8);
 const eBulletGeo = new THREE.SphereGeometry(0.24, 12, 10);
-function spawnBullet(origin, dir, dmg) {
-  const m = new THREE.Mesh(bulletGeo, M.glowYellow);
+function spawnBullet(origin, dir, dmg, weapon, colorOverride) {
+  const color = colorOverride || (weapon ? weapon.color : 0xffd94d);
+  const ownMat = !(color === 0xffd94d && !weapon);
+  const m = new THREE.Mesh(bulletGeo, ownMat ? new THREE.MeshBasicMaterial({ color }) : M.glowYellow);
+  m.scale.setScalar(weapon ? weapon.size : 1);
   m.position.copy(origin); scene.add(m);
   const glow = new THREE.PointLight(0xffc21c, 5, 7, 2); m.add(glow);
-  bullets.push({ m, vx: dir.x * 46, vy: dir.y * 46, vz: dir.z * 46, life: 1.4, dmg });
+  bullets.push({ m, vx: dir.x * 46, vy: dir.y * 46, vz: dir.z * 46, life: 1.4, dmg, aoe: weapon ? weapon.aoe : 0, ownMat });
 }
 function spawnEnemyBullet(origin, dir, dmg) {
   const m = new THREE.Mesh(eBulletGeo, new THREE.MeshBasicMaterial({ color: 0xff2d78 }));
@@ -506,29 +705,61 @@ const player = {
 player.mesh.position.set(0, 0, 6);
 scene.add(player.mesh);
 
-// ---------- Súng góc nhìn thứ nhất (viewmodel): chỉ thấy súng + tâm khi chơi ----------
-const viewModel = new THREE.Group();
-{
-  const arm = box(0.11, 0.11, 0.22, M.red, 0, -0.07, 0.13); viewModel.add(arm); // cẳng tay đỏ của Rubi đỡ súng
-  viewModel.add(box(0.09, 0.17, 0.1, M.redDark, 0, -0.1, 0.02)).children; // báng súng
-  viewModel.children[viewModel.children.length - 1].rotation.x = 0.35;
-  viewModel.add(box(0.14, 0.18, 0.54, M.red, 0, 0, -0.12)); // thân súng đỏ tươi
-  viewModel.add(box(0.07, 0.06, 0.32, M.gold, 0, 0.12, -0.14)); // ray vàng trên thân
-  viewModel.add(box(0.05, 0.09, 0.05, M.black, 0, 0.19, -0.02)); // kính ngắm sau
-  const barrel = cyl(0.045, 0.045, 0.36, M.gun, 0, 0.03, -0.55, 12); barrel.rotation.x = Math.PI / 2; viewModel.add(barrel);
-  viewModel.add(box(0.05, 0.08, 0.05, M.glowYellow, 0, 0.1, -0.38, false)); // đầu ruồi phát sáng
-  const muzzle = sph(0.05, M.glowYellow, 0, 0.03, -0.74); viewModel.add(muzzle);
+// ---------- Súng góc nhìn thứ nhất (viewmodel): hình dạng theo VŨ KHÍ đang trang bị ----------
+function buildViewModel() {
+  const w = weaponById(save.weapon);
+  const g = new THREE.Group();
+  const armMat = save.gear.includes('gloves') ? M.gold : M.red;
+  g.add(box(0.11, 0.11, 0.22, armMat, 0, -0.07, 0.13)); // cẳng tay (vàng nếu có Găng Tia Lửa)
+  const grip = box(0.09, 0.17, 0.1, M.redDark, 0, -0.1, 0.02); grip.rotation.x = 0.35; g.add(grip);
+  let muzzleZ = -0.74;
+  const barrelAt = (x, y, z, r, len, mat) => { const b = cyl(r, r, len, mat || M.gun, x, y, z, 12); b.rotation.x = Math.PI / 2; g.add(b); };
+  if (w.id === 'plasma') {
+    g.add(box(0.2, 0.24, 0.6, new THREE.MeshStandardMaterial({ color: 0x14586e, roughness: 0.35, metalness: 0.6 }), 0, 0, -0.14));
+    g.add(sph(0.1, M.glowCyan, 0, 0, -0.2));
+    g.add(box(0.08, 0.08, 0.3, M.glowCyan, 0, 0.15, -0.16, false));
+    barrelAt(0, 0.02, -0.6, 0.085, 0.42); muzzleZ = -0.84;
+  } else if (w.id === 'dual') {
+    g.add(box(0.2, 0.17, 0.52, M.red, 0, 0, -0.12));
+    g.add(box(0.22, 0.06, 0.3, M.gold, 0, 0.11, -0.12));
+    barrelAt(-0.07, 0.02, -0.52, 0.042, 0.36); barrelAt(0.07, 0.02, -0.52, 0.042, 0.36); muzzleZ = -0.72;
+  } else if (w.id === 'storm') {
+    g.add(box(0.12, 0.15, 0.72, new THREE.MeshStandardMaterial({ color: 0xa3122a, roughness: 0.3, metalness: 0.5 }), 0, 0, -0.2));
+    g.add(box(0.05, 0.05, 0.4, M.gold, 0, 0.1, -0.2));
+    barrelAt(0, 0.03, -0.68, 0.035, 0.3); barrelAt(-0.05, -0.03, -0.64, 0.03, 0.26); barrelAt(0.05, -0.03, -0.64, 0.03, 0.26);
+    g.add(box(0.08, 0.2, 0.14, M.gun, 0, -0.16, -0.3)); muzzleZ = -0.86;
+  } else if (w.id === 'cannon') {
+    g.add(box(0.24, 0.26, 0.56, new THREE.MeshStandardMaterial({ color: 0xc99612, roughness: 0.3, metalness: 0.7 }), 0, 0, -0.12));
+    g.add(sph(0.09, M.glowYellow, -0.15, 0.02, -0.2)); g.add(sph(0.09, M.glowYellow, 0.15, 0.02, -0.2));
+    barrelAt(0, 0.03, -0.58, 0.11, 0.44, M.black); muzzleZ = -0.84;
+  } else {
+    g.add(box(0.14, 0.18, 0.54, M.red, 0, 0, -0.12));
+    g.add(box(0.07, 0.06, 0.32, M.gold, 0, 0.12, -0.14));
+    g.add(box(0.05, 0.09, 0.05, M.black, 0, 0.19, -0.02));
+    barrelAt(0, 0.03, -0.55, 0.045, 0.36);
+    g.add(box(0.05, 0.08, 0.05, M.glowYellow, 0, 0.1, -0.38, false));
+  }
+  const muzzle = sph(0.05, new THREE.MeshBasicMaterial({ color: w.color }), 0, 0.03, muzzleZ); g.add(muzzle);
   const flash = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.95 }));
-  flash.position.set(0, 0.03, -0.8); flash.visible = false; viewModel.add(flash);
-  viewModel.userData.muzzle = muzzle; viewModel.userData.flash = flash;
-  viewModel.position.set(0.30, -0.30, -0.72);
-  viewModel.rotation.y = -0.04;
-  viewModel.scale.setScalar(0.8);
-  viewModel.visible = false;
-  viewModel.traverse(o => { o.castShadow = false; o.receiveShadow = false; });
+  flash.position.set(0, 0.03, muzzleZ - 0.07); flash.visible = false; g.add(flash);
+  g.userData.muzzle = muzzle; g.userData.flash = flash; g.userData.weaponId = w.id;
+  g.position.set(0.30, -0.30, -0.72);
+  g.rotation.y = -0.04;
+  g.scale.setScalar(0.8);
+  g.visible = false;
+  g.traverse(o => { o.castShadow = false; o.receiveShadow = false; });
+  return g;
 }
+let viewModel = buildViewModel();
 scene.add(camera);
 camera.add(viewModel);
+function equipViewModel() {
+  const wasVisible = viewModel.visible;
+  camera.remove(viewModel);
+  viewModel = buildViewModel();
+  viewModel.visible = wasVisible;
+  camera.add(viewModel);
+}
 let vmKick = 0, vmFlashT = 0, leanCur = 0, curIx = 0;
 const enemies = [], pickups = [];
 let bossRef = null;
@@ -607,7 +838,7 @@ function toggleAutoAim() {
   state.autoAim = !state.autoAim;
   localStorage.setItem('kteam-autoaim', state.autoAim ? '1' : '0');
   if (!state.autoAim) { state.lockTarget = null; setLockUI(null); }
-  refreshAutoUI(); SFX.upgrade();
+  refreshAutoUI();
 }
 $('btn-autoaim').addEventListener('click', toggleAutoAim);
 $('btn-autoaim-menu').addEventListener('click', toggleAutoAim);
@@ -629,6 +860,8 @@ function startWave(n) {
   state.wave = n; state.spawnQueue = waveComp(n); state.spawnTimer = 0.5; state.waveActive = true;
   showBanner('WAVE ' + n, n % 5 === 0 ? '⚠ BOSS ĐANG ĐẾN ⚠' : 'Tiêu diệt toàn bộ robot địch');
   SFX.wave(); updateHUD();
+  if (pet.mesh && pet.down) { pet.down = false; pet.hp = pet.maxHp; pet.mesh.rotation.z = 0; toast(`🐾 ${pet.def.name} đã hồi sinh!`); }
+  if (n > 1 && activePetId === 'medic' && player.alive) heal(15);
 }
 function spawnEnemy(type) {
   const cfg = ENEMY_TYPES[type];
@@ -690,11 +923,9 @@ function damagePlayer(n) {
   SFX.hurt(); updateHUD();
   if (player.hp <= 0) { player.hp = 0; gameOver(); }
 }
-function damageEnemy(e, dmg, hitPos) {
+function damageEnemy(e, dmg, hitPos, silent) {
   e.hp -= dmg; e.hitFlash = 0.12;
-  burst(hitPos, 0xffd94d, 4, 4, 0.3, 0.7);
-  const hm = $('hitmarker'); hm.classList.add('on'); clearTimeout(hm._t); hm._t = setTimeout(() => hm.classList.remove('on'), 45);
-  SFX.hit();
+  if (!silent) { burst(hitPos, 0xffd94d, 4, 4, 0.3, 0.7); const hm = $('hitmarker'); hm.classList.add('on'); clearTimeout(hm._t); hm._t = setTimeout(() => hm.classList.remove('on'), 45); SFX.hit(); }
   if (e.hp <= 0) killEnemy(e);
 }
 function killEnemy(e) {
@@ -709,9 +940,9 @@ function killEnemy(e) {
   state.kills++;
   state.combo++; state.comboTimer = 3;
   state.multiplier = Math.min(5, 1 + Math.floor(state.combo / 4));
-  state.score += e.score * state.multiplier;
+  state.score += Math.round(e.score * state.multiplier * (petMods.scoreMul || 1));
   // rơi vật phẩm hồi máu 18%
-  if (Math.random() < 0.18 || e.type === 'boss') dropPickup(e.mesh.position);
+  if (Math.random() < (petMods.drop || 0.18) || e.type === 'boss') dropPickup(e.mesh.position);
   updateHUD();
 }
 function dropPickup(pos) {
@@ -729,6 +960,148 @@ function tryDash() {
   SFX.dash();
   burst(player.mesh.position.clone().setY(0.8), 0x37e0ff, 10, 4, 0.35, 0.8);
 }
+
+
+// ---------- Pet runtime ----------
+let activePetId = 'mochi';
+let petMods = { scoreMul: 1, drop: 0.18, magnet: 1.7 };
+const pet = { def: null, mesh: null, hp: 0, maxHp: 0, down: false, zapT: 1.5, anchorA: Math.random() * 6.28, hitFlash: 0, regenT: 0, barFg: null };
+function setPet(id) {
+  if (pet.mesh) scene.remove(pet.mesh);
+  pet.def = petById(id); activePetId = id;
+  pet.mesh = pet.def.build();
+  pet.maxHp = pet.def.hp; pet.hp = pet.maxHp; pet.down = false; pet.zapT = 1.5; pet.hitFlash = 0;
+  const bar = new THREE.Group();
+  const bg = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.15), new THREE.MeshBasicMaterial({ color: 0x0a1a10, side: THREE.DoubleSide, depthTest: false }));
+  const fg = new THREE.Mesh(new THREE.PlaneGeometry(1.24, 0.1), new THREE.MeshBasicMaterial({ color: 0x2bff88, side: THREE.DoubleSide, depthTest: false }));
+  fg.position.z = 0.005; bar.add(bg, fg); bar.position.y = 2.02; bar.renderOrder = 99;
+  pet.mesh.add(bar); pet.barFg = fg;
+  const label = nameSprite(pet.def.name, pet.def.colorCss); label.position.y = 2.38; pet.mesh.add(label);
+  pet.mesh.position.set(player.mesh.position.x + 2.4, 0, player.mesh.position.z + 1.6);
+  scene.add(pet.mesh);
+}
+function damagePet(n) {
+  if (!pet.mesh || pet.down || state.mode !== 'playing') return;
+  pet.hp -= n; pet.hitFlash = 0.15;
+  burst(pet.mesh.position.clone().setY(1), 0xff5964, 5, 4, 0.35);
+  if (pet.hp <= 0) {
+    pet.hp = 0; pet.down = true;
+    pet.mesh.rotation.z = Math.PI / 2 * 0.9;
+    burst(pet.mesh.position.clone().setY(0.8), 0xffffff, 16, 6, 0.6);
+    SFX.boom(); toast(`💤 ${pet.def.name} đã ngã! Sẽ hồi sinh ở wave sau`);
+  }
+}
+function updatePet(dt) {
+  if (!pet.mesh || !pet.def) return;
+  const pm = pet.mesh, pp = player.mesh.position;
+  pet.hitFlash = Math.max(0, pet.hitFlash - dt);
+  pm.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(pet.hitFlash > 0 ? 0x662222 : 0x000000); });
+  if (pet.barFg) {
+    pet.barFg.parent.quaternion.copy(camera.quaternion);
+    pet.barFg.scale.x = Math.max(0, pet.hp / pet.maxHp);
+    pet.barFg.position.x = -(1 - pet.hp / pet.maxHp) * 0.62;
+  }
+  if (pet.down) { pm.position.y = 0.12; return; }
+  pet.anchorA += dt * 0.3;
+  const ax = pp.x + Math.sin(pet.anchorA) * 2.4, az = pp.z + Math.cos(pet.anchorA) * 2.4;
+  const dx = ax - pm.position.x, dz = az - pm.position.z, dist = Math.hypot(dx, dz);
+  if (dist > 0.35) {
+    const sp = dist > 7 ? 9.5 : 4.6;
+    pm.position.x += dx / dist * sp * dt; pm.position.z += dz / dist * sp * dt;
+    pm.rotation.y = Math.atan2(dx, dz);
+  }
+  collideObstacles(pm.position, 0.5);
+  const moving = dist > 0.35;
+  pm.position.y = pet.def.fly ? 0.5 + Math.sin(state.time * 2.2) * 0.12 : (moving ? Math.abs(Math.sin(state.time * 9)) * 0.06 : 0);
+  if (pet.def.id === 'rai' && pm.userData.tents) pm.userData.tents.forEach((tn, i) => { tn.rotation.x = Math.sin(state.time * 5 + i * 1.3) * 0.35; });
+  if (pet.def.id === 'mochi' && pm.userData.body) { const sq = 1 + Math.sin(state.time * 4) * 0.07; pm.userData.body.scale.set(1 / Math.sqrt(sq), 0.88 * sq, 0.95 / Math.sqrt(sq)); }
+  if (pet.def.id === 'meo' && pm.userData.tail) pm.userData.tail.rotation.x = Math.sin(state.time * 3) * 0.3;
+  if (state.mode !== 'playing' || !player.alive) return;
+  pet.zapT -= dt;
+  if (pet.zapT <= 0) {
+    pet.zapT = 2.2;
+    let nd = 8.5, ne = null;
+    for (const e of enemies) { const d = e.mesh.position.distanceTo(pm.position); if (d < nd) { nd = d; ne = e; } }
+    if (ne) {
+      const from = pm.position.clone(); from.y += 1.1;
+      const dir = ne.mesh.position.clone(); dir.y = 1.2 * ne.mesh.scale.y; dir.sub(from).normalize();
+      spawnBullet(from, dir, pet.def.zap, null, pet.def.color);
+      beep(920, 0.06, 'sine', 0.035);
+    }
+  }
+  if (pet.def.id === 'mochi') { pet.regenT += dt; if (pet.regenT >= 4) { pet.regenT = 0; if (player.hp < player.maxHp) heal(1); } }
+  if (pet.def.id === 'fire') { for (const e of [...enemies]) if (e.mesh.position.distanceTo(pm.position) < 3.2) damageEnemy(e, 4 * dt, e.mesh.position.clone(), true); }
+}
+function computeStats() {
+  const w = weaponById(save.weapon);
+  const has = id => save.gear.includes(id);
+  player.baseWeapon = w;
+  player.dmg = w.dmg * (has('core') ? 1.2 : 1);
+  player.fireRate = w.rate * (has('gloves') ? 0.85 : 1) * (activePetId === 'rai' ? 0.93 : 1);
+  player.maxHp = 100 + (has('armor') ? 50 : 0);
+  player.speed = 7.2 * (has('boots') ? 1.12 : 1) * (activePetId === 'meo' ? 1.08 : 1);
+  player.dashRate = (has('boots') ? 0.8 : 1) * (activePetId === 'astro' ? 0.8 : 1);
+  state.lockRange = has('scope') ? 62 : 52;
+  state.aimCone = IS_TOUCH ? (has('scope') ? 1.15 : 0.95) : 0.35;
+  petMods = { scoreMul: activePetId === 'pirate' ? 1.1 : 1, drop: activePetId === 'farmer' ? 0.3 : 0.18, magnet: activePetId === 'chef' ? 3.4 : 1.7 };
+}
+
+// ---------- Toast + Cửa hàng ----------
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2500);
+}
+function refreshLoadout() {
+  $('loadout-text').textContent = `🔫 ${weaponById(save.weapon).name} · 🐾 ${petById(activePetId).name}`;
+  const pet = petById(activePetId);
+  $('pet-line').innerHTML = `🐾 Pet đồng hành: <b>${pet.name}</b> (${pet.rarity} · ${pet.kind}) — ${pet.perk}` + (save.pendingPet ? `<br>🎁 Pet ván tới đã quay được: <b>${petById(save.pendingPet).name}</b>` : '');
+}
+function renderShop() {
+  $('shop-credits').textContent = '💰 ' + save.credits.toLocaleString('vi-VN') + ' điểm tích lũy';
+  const pet = petById(activePetId);
+  $('shop-loadout').innerHTML = `Đang trang bị: <b>🔫 ${weaponById(save.weapon).name}</b> · Pet: <b>${pet.name}</b> (${pet.rarity}) — ${pet.perk}<br>Điểm ván trước: <b>${save.lastScore.toLocaleString('vi-VN')}</b> · Điểm tích lũy mua đồ: <b>${save.credits.toLocaleString('vi-VN')}</b>`;
+  $('shop-weapons').innerHTML = WEAPONS.map(w => {
+    const owned = save.weapons.includes(w.id), eq = save.weapon === w.id;
+    const btn = eq ? '<button class="equipped" disabled>✓ ĐANG DÙNG</button>'
+      : owned ? `<button class="owned" data-equip="${w.id}">TRANG BỊ</button>`
+      : `<button data-buyw="${w.id}" ${save.credits < w.price ? 'disabled' : ''}>MUA · ${w.price.toLocaleString('vi-VN')}đ</button>`;
+    return `<div class="item ${eq ? 'equipped' : ''}"><div class="ic">${w.icon}</div><div class="nm">${w.name}</div><div class="ds">${w.desc}<br>DMG ${w.dmg} · Tốc ${Math.round(1 / w.rate)}/s${w.pellets > 1 ? ' · ' + w.pellets + ' tia' : ''}${w.aoe ? ' · Nổ diện ' + w.aoe + 'm' : ''}</div><div class="pr">${owned ? 'Đã sở hữu' : w.price.toLocaleString('vi-VN') + ' điểm'}</div>${btn}</div>`;
+  }).join('');
+  $('shop-gear').innerHTML = GEAR.map(it => {
+    const owned = save.gear.includes(it.id);
+    const btn = owned ? '<button class="owned" disabled>✓ ĐÃ SỞ HỮU</button>'
+      : `<button data-buyg="${it.id}" ${save.credits < it.price ? 'disabled' : ''}>MUA · ${it.price.toLocaleString('vi-VN')}đ</button>`;
+    return `<div class="item"><div class="ic">${it.icon}</div><div class="nm">${it.name}</div><div class="ds">${it.desc}</div><div class="pr">${owned ? 'Đã sở hữu' : it.price.toLocaleString('vi-VN') + ' điểm'}</div>${btn}</div>`;
+  }).join('');
+  document.querySelectorAll('[data-buyw]').forEach(b => b.addEventListener('click', () => buyWeapon(b.dataset.buyw)));
+  document.querySelectorAll('[data-equip]').forEach(b => b.addEventListener('click', () => equipWeapon(b.dataset.equip)));
+  document.querySelectorAll('[data-buyg]').forEach(b => b.addEventListener('click', () => buyGear(b.dataset.buyg)));
+}
+function buyWeapon(id) {
+  const w = weaponById(id);
+  if (save.weapons.includes(id) || save.credits < w.price) return;
+  save.credits -= w.price; save.weapons.push(id); persistSave();
+  SFX.upgrade(); toast(`Đã mua ${w.name}!`);
+  equipWeapon(id);
+}
+function equipWeapon(id) {
+  if (!save.weapons.includes(id)) return;
+  save.weapon = id; persistSave();
+  equipViewModel(); computeStats(); refreshLoadout(); renderShop();
+  toast(`Đã trang bị 🔫 ${weaponById(id).name}`);
+}
+function buyGear(id) {
+  const it = GEAR.find(x => x.id === id);
+  if (!it || save.gear.includes(id) || save.credits < it.price) return;
+  save.credits -= it.price; save.gear.push(id); persistSave();
+  applyGearVisuals(); equipViewModel(); computeStats(); refreshLoadout(); renderShop();
+  SFX.upgrade(); toast(`Đã mua ${it.name} — hiệu lực ngay!`);
+}
+function openShop() { renderShop(); $('shop').classList.add('on'); }
+function closeShop() { $('shop').classList.remove('on'); }
+$('btn-shop-menu').addEventListener('click', openShop);
+$('btn-shop-over').addEventListener('click', openShop);
+$('shop-close').addEventListener('click', closeShop);
 
 // ---------- HUD / flow ----------
 function updateHUD() {
@@ -751,12 +1124,15 @@ function startGame() {
   for (const p of pickups) scene.remove(p.mesh); pickups.length = 0;
   bossRef = null; $('boss-wrap').classList.remove('on'); state.lockTarget = null; state.aimPoint = null; setLockUI(null);
   Object.assign(state, { score: 0, wave: 0, kills: 0, combo: 0, comboTimer: 0, multiplier: 1, shake: 0, spawnQueue: [], waveActive: false });
-  Object.assign(player, { hp: 100, maxHp: 100, speed: 7.2, dmg: 12, fireRate: 0.16, fireTimer: 0, dashCd: 0, dashTime: 0, invuln: 0, alive: true, dashRate: 1 });
+  computeStats();
+  Object.assign(player, { hp: player.maxHp, fireTimer: 0, dashCd: 0, dashTime: 0, invuln: 0, alive: true });
   player.mesh.visible = false; viewModel.visible = true; viewModel.position.set(0.30, -0.30, -0.72); viewModel.rotation.set(0, -0.04, 0); player.mesh.position.set(0, 0, 6); camYaw = Math.PI; camPitch = IS_TOUCH ? 0.52 : 0.34;
   $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause-screen').classList.add('hidden');
   $('hud').classList.add('on'); $('btn-pause').classList.add('on');
   if (IS_TOUCH) $('hint').textContent = 'Góc nhìn thứ nhất · Joystick di chuyển · Camera tự bám hướng chạy · Giữ 🔥 bắn: tự quay về địch gần nhất';
   if (IS_TOUCH) $('touch').classList.add('on');
+  if (save.pendingPet) { activePetId = save.pendingPet; save.pendingPet = null; save.currentPet = activePetId; persistSave(); }
+  setPet(activePetId); computeStats(); player.hp = player.maxHp; refreshLoadout();
   state.mode = 'playing';
   updateHUD(); startWave(1);
 }
@@ -766,9 +1142,12 @@ function gameOver() {
   player.mesh.visible = false;
   SFX.over(); state.shake = 0.5;
   if (state.score > state.best) { state.best = state.score; localStorage.setItem('kteam-best', state.best); }
+  save.credits += state.score; save.lastScore = state.score;
+  const nextPet = rollPet(state.score); save.pendingPet = nextPet.id; persistSave(); gameOver._nextPet = nextPet;
+  refreshLoadout();
   if (document.pointerLockElement) document.exitPointerLock();
   setTimeout(() => {
-    $('gameover-stats').innerHTML = `Điểm: <b>${state.score.toLocaleString('vi-VN')}</b> · Kỷ lục: <b>${state.best.toLocaleString('vi-VN')}</b><br>Đạt wave: <b>${state.wave}</b> · Hạ: <b>${state.kills}</b> robot địch`;
+    $('gameover-stats').innerHTML = `Điểm: <b>${state.score.toLocaleString('vi-VN')}</b> · Kỷ lục: <b>${state.best.toLocaleString('vi-VN')}</b><br>Đạt wave: <b>${state.wave}</b> · Hạ: <b>${state.kills}</b> robot địch<br>💰 +${state.score.toLocaleString('vi-VN')} điểm tích lũy (tổng: <b>${save.credits.toLocaleString('vi-VN')}</b>) — vào Cửa hàng mua đồ nhé!<br>🎁 Pet ván tới: <b>${gameOver._nextPet.name}</b> (${gameOver._nextPet.rarity}) — ${gameOver._nextPet.perk}`;
     $('gameover').classList.remove('hidden'); $('touch').classList.remove('on');
   }, 900);
 }
@@ -813,7 +1192,7 @@ function animate() {
         return Math.hypot(dx, dz) * 0.7 + Math.abs(ang) * 22 - (e.type === 'boss' ? 10 : 0) - (e === state.lockTarget ? 16 : 0);
       };
       let cur = state.lockTarget;
-      if (cur && (!enemies.includes(cur) || cur.mesh.position.distanceTo(pp0) > 52)) cur = null;
+      if (cur && (!enemies.includes(cur) || cur.mesh.position.distanceTo(pp0) > (state.lockRange || 52))) cur = null;
       let best = null, bestScore = 1e9;
       for (const e of enemies) { const sc = scoreOf(e); if (sc < bestScore) { bestScore = sc; best = e; } }
       if (!cur) { cur = best; if (cur) state.lastSwitch = state.time; }
@@ -921,7 +1300,7 @@ function animate() {
       // auto-aim: nón ngắm tính theo hướng camera, hướng đạn tính TỪ ĐẦU NÒNG tới ngực địch
       let aimed = false;
       if (IS_TOUCH || AUTOTEST) {
-        let bestE = null, bestD = AUTOTEST ? 1.15 : (IS_TOUCH ? 0.95 : 0.35);
+        let bestE = null, bestD = AUTOTEST ? 1.15 : (state.aimCone || 0.35);
         for (const e of enemies) {
           _v.copy(e.mesh.position).setY(1.3 * e.mesh.scale.y).sub(camera.position).normalize();
           const ang = _v.angleTo(_rawDir);
@@ -934,7 +1313,12 @@ function animate() {
         if (_v3.y < 1.1) _v3.y = 1.1;
         _dir.copy(_v3).sub(tipPos).normalize();
       }
-      spawnBullet(tipPos, _dir.clone(), player.dmg);
+      const wpn = player.baseWeapon || WEAPONS[0];
+      for (let pi = 0; pi < (wpn.pellets || 1); pi++) {
+        const d = _dir.clone();
+        if (wpn.spread) { d.applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5) * 2 * wpn.spread); d.y += (Math.random() - 0.5) * wpn.spread; d.normalize(); }
+        spawnBullet(tipPos, d, player.dmg, wpn);
+      }
       state.shots = (state.shots || 0) + 1;
       SFX.shoot();
     }
@@ -944,13 +1328,17 @@ function animate() {
       const b = bullets[i]; b.life -= dt;
       b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt;
       let dead = b.life <= 0 || b.m.position.y < 0 || Math.hypot(b.m.position.x, b.m.position.z) > ARENA_R + 2;
+      let hitE = null;
       if (!dead) for (const e of enemies) {
         _v.copy(e.mesh.position); _v.y = b.m.position.y;
         if (Math.hypot(b.m.position.x - _v.x, b.m.position.z - _v.z) < e.radius + 0.25 && b.m.position.y > -0.2 && b.m.position.y < 3.4 * e.mesh.scale.y) {
-          damageEnemy(e, b.dmg, b.m.position.clone()); dead = true; break;
+          damageEnemy(e, b.dmg, b.m.position.clone()); hitE = e; dead = true; break;
         }
       }
-      if (dead) { scene.remove(b.m); bullets.splice(i, 1); }
+      if (dead) {
+        if (b.aoe) for (const e2 of [...enemies]) { if (e2 !== hitE && Math.hypot(e2.mesh.position.x - b.m.position.x, e2.mesh.position.z - b.m.position.z) < b.aoe + e2.radius) damageEnemy(e2, b.dmg * 0.6, b.m.position.clone()); }
+        scene.remove(b.m); if (b.ownMat) b.m.material.dispose(); bullets.splice(i, 1);
+      }
     }
     // --- đạn địch (boss) ---
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
@@ -958,12 +1346,19 @@ function animate() {
       b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt;
       let dead = b.life <= 0 || b.m.position.y < 0;
       if (!dead && player.alive && b.m.position.distanceTo(_v.copy(player.mesh.position).setY(1.4)) < 1.15) { damagePlayer(b.dmg); burst(b.m.position, 0xff2d78, 8, 5, 0.4); dead = true; }
+      if (!dead && pet.mesh && !pet.down && b.m.position.distanceTo(_v.copy(pet.mesh.position).setY(0.9)) < 1.0) { damagePet(b.dmg); burst(b.m.position, 0xff2d78, 6, 4, 0.35); dead = true; }
       if (dead) { scene.remove(b.m); enemyBullets.splice(i, 1); }
     }
     // --- địch ---
     for (const e of enemies) {
       const p = e.mesh.position, pp = player.mesh.position;
-      const dx = pp.x - p.x, dz = pp.z - p.z, dist = Math.hypot(dx, dz);
+      e.thinkT = (e.thinkT || 0) - dt;
+      if (e.thinkT <= 0) {
+        e.thinkT = 0.4 + Math.random() * 0.3;
+        e.target = (pet.mesh && !pet.down && pet.mesh.position.distanceTo(p) < 15 && Math.random() < pet.def.decoy) ? 'pet' : 'player';
+      }
+      const tp = (e.target === 'pet' && pet.mesh && !pet.down) ? pet.mesh.position : pp;
+      const dx = tp.x - p.x, dz = tp.z - p.z, dist = Math.hypot(dx, dz);
       e.mesh.rotation.y = Math.atan2(dx, dz);
       e.hitFlash = Math.max(0, e.hitFlash - dt);
       e.mesh.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(e.hitFlash > 0 ? 0x772222 : 0x000000); });
@@ -973,14 +1368,14 @@ function animate() {
         p.y = Math.abs(Math.sin(t * 7 + e.wobble)) * 0.06;
       } else {
         e.atkCd -= dt;
-        if (e.atkCd <= 0 && player.alive) { e.atkCd = 0.85; damagePlayer(e.dmg); p.y = 0.18; setTimeout(() => p.y = 0, 90); }
+        if (e.atkCd <= 0) { e.atkCd = 0.85; if (e.target === 'pet' && pet.mesh && !pet.down) damagePet(e.dmg); else if (player.alive) damagePlayer(e.dmg); p.y = 0.18; setTimeout(() => p.y = 0, 90); }
       }
       // boss bắn đạn
       if (e.type === 'boss') {
         e.shootCd -= dt;
         if (e.shootCd <= 0 && dist < 34 && player.alive) {
           e.shootCd = 1.7;
-          _dir.copy(pp).setY(1.4).sub(_v.copy(p).setY(2.2)).normalize();
+          _dir.copy(tp).setY(1.4).sub(_v.copy(p).setY(2.2)).normalize();
           spawnEnemyBullet(_v.copy(p).setY(2.6), _dir.clone(), 12);
           spawnEnemyBullet(_v.copy(p).setY(2.6), _dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.16), 12);
           spawnEnemyBullet(_v.copy(p).setY(2.6), _dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.16), 12);
@@ -1003,7 +1398,7 @@ function animate() {
       const pk = pickups[i]; pk.life -= dt;
       pk.mesh.rotation.y += dt * 2.4; pk.mesh.position.y = 1 + Math.sin(t * 3 + i) * 0.18;
       if (pk.life <= 0) { scene.remove(pk.mesh); pickups.splice(i, 1); continue; }
-      if (player.alive && pk.mesh.position.distanceTo(player.mesh.position) < 1.7) {
+      if (player.alive && pk.mesh.position.distanceTo(player.mesh.position) < (petMods.magnet || 1.7)) {
         heal(25); SFX.pickup(); burst(pk.mesh.position, 0x2bff88, 10, 4, 0.45);
         scene.remove(pk.mesh); pickups.splice(i, 1); updateHUD();
       }
@@ -1011,6 +1406,7 @@ function animate() {
   }
 
   updateParticles(dt);
+  updatePet(dt);
   // --- camera FPS nhập vai: đặt tại mắt Rubi, chỉ thấy súng + tâm ---
   const pp = player.mesh.position;
   state.shake = Math.max(0, state.shake - dt * 2.2);
@@ -1042,6 +1438,9 @@ function animate() {
   rim.intensity = 55 + Math.sin(t * 2.4) * 14;
   renderer.render(scene, camera);
 }
+if (!save.currentPet) { save.currentPet = rollPet(save.lastScore).id; persistSave(); }
+activePetId = save.currentPet;
+setPet(activePetId); computeStats(); applyGearVisuals(); refreshLoadout();
 animate();
 updateHUD();
 
@@ -1049,6 +1448,7 @@ updateHUD();
 if (AUTOTEST) {
   window.__errors = [];
   addEventListener('error', e => window.__errors.push(String(e.message)));
+  setPet('mochi'); // pet trung tính cho test xác định (mồi nhử thấp nhất, không aura)
   startGame();
   const t0 = performance.now();
   let phase2 = null, killsBeforePhase2 = 0;
@@ -1070,7 +1470,7 @@ if (AUTOTEST) {
     }
   }, 500);
 }
-window.KTEAM = { scene, state, player, enemies, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }) };
+window.KTEAM = { scene, state, player, enemies, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }), get save() { return save; }, pet, PET_DEFS, WEAPONS, GEAR, buyWeapon, buyGear, equipWeapon, setPet, rollPet, computeStats, openShop, damagePet };
 </script>
 </body>
 </html>

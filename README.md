@@ -27,6 +27,13 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 
 > Thư viện Three.js (MIT) được đóng gói sẵn trong `lib/` — game chạy **offline 100%**, không phụ thuộc CDN.
 
+## Cửa hàng & Pet (bản nâng cấp)
+
+- **Điểm tích lũy:** điểm mỗi ván cộng thành tiền tệ vĩnh viễn khi ván kết thúc — vào **🛒 Cửa hàng** (từ menu hoặc màn hình kết thúc) để mua đồ.
+- **5 vũ khí:** Blaster Rubi (mặc định) · Song Tia Lửa (2 tia) · Pháo Plasma · Bão Lửa Liên Thanh · Cannon Hoàng Kim (nổ diện rộng). Đổi vũ khí là **súng góc nhìn thứ nhất đổi hình thật** (nòng, màu đạn, tốc độ bắn đều khác).
+- **5 trang bị:** Giáp Hợp Kim (+50 máu) · Găng Tia Lửa (+15% tốc độ bắn) · Giày Tốc Độ · Kính Ngắm AI (tầm khóa 62) · Lõi Năng Lượng (+20% dmg) — mua 1 lần dùng mãi và **hiện trên người Rubi** (khiên vàng, kính ngắm, lõi sáng...).
+- **10 pet từ vũ trụ mascot của Ryan:** Mochi · Robo Nông Dân · Robo Đầu Bếp · RAI · Robo Y Tế · Robo Cứu Hỏa · Robo Hải Tặc · Mèo Mun · Robo Phi Hành · Robo Siêu Anh Hùng. Sau mỗi ván, game **quay pet cho ván sau dựa trên điểm ván vừa chơi** (điểm càng cao tỉ lệ Epic càng lớn: 0đ ≈ 18% → 4000đ ≈ 58%). Pet tự chạy theo chủ, **làm chim mồi dụ quái đuổi theo mình**, bắn tia hỗ trợ mỗi 2,2s và mỗi bé có một perk riêng (Mochi hồi máu, Hải Tặc +10% điểm, Siêu Anh Hùng mồi nhử mạnh nhất...). Pet ngã sẽ hồi sinh ở wave kế tiếp.
+
 ## Cách chơi
 
 | Điều khiển | Hành động |
