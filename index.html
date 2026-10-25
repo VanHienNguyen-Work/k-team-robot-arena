@@ -202,6 +202,8 @@
   <button class="btn ghost" id="btn-autoaim-menu" style="margin-top:12px">🎯 Tâm bắn tự động: BẬT</button>
   <button class="btn ghost" id="btn-shop-menu" style="margin-top:10px">🛒 Cửa hàng trang bị</button>
   <button class="btn ghost" id="btn-quality" style="margin-top:10px">⚙️ Chất lượng: Tự động</button>
+  <button class="btn ghost" id="btn-soundtest" style="margin-top:10px">🔊 Kiểm tra tiếng</button>
+  <div id="audio-status" style="margin-top:6px;font-size:11.5px;color:#7d8fc9"></div>
   <div id="pet-line"></div>
   <div id="version-line" style="margin-top:6px;font-size:11.5px;color:#7d8fc9"></div>
   <div id="best-line"></div>
@@ -340,9 +342,15 @@ scene.add(rim);
 let AC = null;
 let muted = false;
 try { muted = localStorage.getItem('kteam-muted') === '1'; } catch (e) { }
-function refreshMuteUI() { const b = $('btn-mute'); if (b) b.textContent = muted ? '🔇' : '🔊'; }
+function refreshMuteUI() { const b = $('btn-mute'); if (b) b.textContent = muted ? '🔇' : '🔊'; refreshAudioStatus(); }
 function toggleMute() { muted = !muted; try { localStorage.setItem('kteam-muted', muted ? '1' : '0'); } catch (e) { } refreshMuteUI(); SFX.click(); }
-function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (AC && AC.state === 'suspended') AC.resume(); if (AC && AC.state === 'running') audioUnlocked = true; return AC; }
+// Chuyển phiên âm thanh sang kênh playback (iOS 17+): WebAudio mặc định chạy kênh
+// ambient nên công tắc im lặng bên hông iPhone giết tiếng hoàn toàn — resume() chỉ
+// gỡ khóa autoplay chứ KHÔNG qua mặt được công tắc. Đặt type='playback' trước khi
+// tạo context và lặp lại trong mọi cử chỉ; iOS cũ không có API này thì try/catch bỏ qua.
+function setPlaybackSession() { try { const s = navigator.audioSession; if (s) s.type = 'playback'; } catch (e) { } }
+setPlaybackSession();
+function audio() { setPlaybackSession(); if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (AC && AC.state === 'suspended') AC.resume(); if (AC && AC.state === 'running') audioUnlocked = true; return AC; }
 // Mở khóa âm thanh: iOS Safari chỉ cho AudioContext chạy khi resume() + phát node
 // được gọi TRONG cử chỉ thật (tap/phím). Trước đây game chỉ gọi audio() ở nút bắt
 // đầu — nếu lần đó không mở khóa được (hoặc context bị ngắt sau đó vì cuộc gọi,
@@ -1483,6 +1491,18 @@ function buyGear(id) {
 function openShop() { renderShop(); $('shop').classList.add('on'); }
 function closeShop() { $('shop').classList.remove('on'); }
 $('btn-shop-menu').addEventListener('click', openShop);
+function refreshAudioStatus(extra = '') {
+  const el = $('audio-status'); if (!el) return;
+  const sess = (navigator.audioSession && navigator.audioSession.type) || 'không hỗ trợ (iOS cũ)';
+  el.textContent = 'Âm thanh: ' + (AC ? AC.state : 'chưa mở') + (muted ? ' · ĐANG TẮT TIẾNG' : ' · đang bật') + ' · phiên: ' + sess + extra;
+}
+function soundTest() { // phát 1 chuỗi tiếng TO, DÀI, không thể nghe nhầm — để chẩn đoán dứt điểm
+  unlockAudio();
+  if (muted) { refreshAudioStatus(' — bấm nút 🔊 góc trên để bật tiếng'); toast('🔇 Đang tắt tiếng — bấm nút 🔊 góc phải trên để bật lại'); return; }
+  beep(880, 0.4, 'square', 0.25); setTimeout(() => beep(1320, 0.4, 'square', 0.25), 300); setTimeout(() => noiseBurst(0.3, 0.25), 650);
+  refreshAudioStatus(' — vừa phát tiếng kiểm tra');
+}
+$('btn-soundtest').addEventListener('click', soundTest);
 $('btn-quality').addEventListener('click', () => {
   const order = ['auto', 'high', 'medium', 'low'];
   setQualityPref(order[(order.indexOf(qualityPref) + 1) % order.length]);
@@ -1905,6 +1925,7 @@ activePetId = save.currentPet;
 setPet(activePetId); computeStats(); applyGearVisuals(); refreshLoadout();
 $('version-line').textContent = 'Phiên bản ' + GAME_VERSION + ' "' + VERSION_NAME + '" · Tag Git: ' + GAME_VERSION + ' · Xem VERSIONS.md trong repo';
 applyQuality(qualityPref === 'auto' ? 'high' : qualityPref);
+refreshAudioStatus();
 animate();
 updateHUD();
 
