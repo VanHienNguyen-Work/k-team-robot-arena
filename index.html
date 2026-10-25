@@ -342,7 +342,26 @@ let muted = false;
 try { muted = localStorage.getItem('kteam-muted') === '1'; } catch (e) { }
 function refreshMuteUI() { const b = $('btn-mute'); if (b) b.textContent = muted ? '🔇' : '🔊'; }
 function toggleMute() { muted = !muted; try { localStorage.setItem('kteam-muted', muted ? '1' : '0'); } catch (e) { } refreshMuteUI(); SFX.click(); }
-function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (AC && AC.state === 'suspended') AC.resume(); if (AC && AC.state === 'running') audioUnlocked = true; return AC; }
+// Mở khóa âm thanh: iOS Safari chỉ cho AudioContext chạy khi resume() + phát node
+// được gọi TRONG cử chỉ thật (tap/phím). Trước đây game chỉ gọi audio() ở nút bắt
+// đầu — nếu lần đó không mở khóa được (hoặc context bị ngắt sau đó vì cuộc gọi,
+// chuyển tab...), mọi tiếng về sau gọi resume() ngoài cử chỉ đều bị bỏ qua → câm
+// hoàn toàn. Giờ mọi cử chỉ đều thử mở khóa lại; khi đang chạy thì hàm này gần
+// như không tốn gì (chỉ kiểm tra state).
+let audioUnlocked = false;
+function unlockAudio() {
+  const ac = audio(); if (!ac) return;
+  if (ac.state === 'running') { audioUnlocked = true; return; }
+  try { // phát 1 node câm trong cử chỉ — chiêu mở khóa kinh điển trên iOS
+    const o = ac.createOscillator(), g = ac.createGain();
+    g.gain.value = 0; o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.05);
+  } catch (e) { }
+  if (ac.state === 'suspended') ac.resume();
+}
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('touchstart', unlockAudio, { passive: true });
+window.addEventListener('keydown', unlockAudio);
 function beep(freq, dur, type = 'square', vol = 0.12, slide = 0) {
   if (muted) return;
   const ac = audio(); if (!ac) return;
@@ -1492,7 +1511,7 @@ function updateHUD() { // chỉ ghi DOM khi giá trị đổi — trước đây
   if (bossRef) { const bp = Math.max(0, bossRef.hp / bossRef.maxHp * 100); if (updateHUD._bp !== bp) { updateHUD._bp = bp; $('boss-fill').style.width = bp + '%'; } }
 }
 function startGame() {
-  audio();
+  unlockAudio();
   // dọn dẹp
   for (const e of enemies) scene.remove(e.mesh); enemies.length = 0;
   for (const b of bullets) scene.remove(b.m); bullets.length = 0;
@@ -1505,6 +1524,7 @@ function startGame() {
   player.mesh.visible = false; viewModel.visible = true; viewModel.position.set(0.30, -0.30, -0.72); viewModel.rotation.set(0, -0.04, 0); player.mesh.position.set(0, 0, 6); camYaw = Math.PI; camPitch = IS_TOUCH ? 0.52 : 0.34;
   $('menu').classList.add('hidden'); $('gameover').classList.add('hidden'); $('pause-screen').classList.add('hidden');
   $('hud').classList.add('on'); $('btn-pause').classList.add('on'); $('btn-mute').classList.add('on'); refreshMuteUI();
+  if (muted) toast('🔇 Đang tắt tiếng — bấm nút 🔊 góc phải trên để bật lại');
   if (IS_TOUCH) $('hint').textContent = 'Góc nhìn thứ nhất · Joystick di chuyển · Camera tự bám hướng chạy · Giữ 🔥 bắn: tự quay về địch gần nhất';
   if (IS_TOUCH) $('touch').classList.add('on');
   if (save.pendingPet) { activePetId = save.pendingPet; save.pendingPet = null; save.currentPet = activePetId; persistSave(); }
@@ -1914,7 +1934,7 @@ if (AUTOTEST) {
     }
   }, 500);
 }
-window.KTEAM = { scene, state, player, enemies, obstacles, bullets, spawnBullet, killEnemy, damageEnemy, applyQuality, setQualityPref, get qualityLevel() { return qualityLevel; }, get qualityPref() { return qualityPref; }, burst, get particleCount() { return particles.length; }, get shadowOn() { return renderer.shadowMap.enabled; }, get pixelRatio() { return renderer.getPixelRatio(); }, get shadowSize() { return sun.shadow.mapSize.x; }, get decorCount() { return decorCount; }, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }), get save() { return save; }, pet, PET_DEFS, WEAPONS, GEAR, buyWeapon, buyGear, equipWeapon, setPet, rollPet, computeStats, openShop, damagePet, offerUpgrades, recommendUpgrade };
+window.KTEAM = { scene, state, player, enemies, obstacles, bullets, spawnBullet, killEnemy, damageEnemy, applyQuality, setQualityPref, get qualityLevel() { return qualityLevel; }, get qualityPref() { return qualityPref; }, audio, unlockAudio, SFX, get audioState() { return AC ? AC.state : 'none'; }, get audioUnlocked() { return audioUnlocked; }, get muted() { return muted; }, burst, get particleCount() { return particles.length; }, get shadowOn() { return renderer.shadowMap.enabled; }, get pixelRatio() { return renderer.getPixelRatio(); }, get shadowSize() { return sun.shadow.mapSize.x; }, get decorCount() { return decorCount; }, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }), get save() { return save; }, pet, PET_DEFS, WEAPONS, GEAR, buyWeapon, buyGear, equipWeapon, setPet, rollPet, computeStats, openShop, damagePet, offerUpgrades, recommendUpgrade };
 </script>
 </body>
 </html>
