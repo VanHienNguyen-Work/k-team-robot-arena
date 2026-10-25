@@ -27,6 +27,11 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 
 > Thư viện Three.js (MIT) được đóng gói sẵn trong `lib/` — game chạy **offline 100%**, không phụ thuộc CDN.
 
+## Phiên bản
+
+- **v1.1 hiện tại** (tag Git `v1.1`): âm thanh phong phú + nút tắt tiếng góc trên, 9 vũ khí (thêm Laze xuyên, Sấm Sét lan, Minigun 3 tia, Băng làm chậm), mỗi pet 1 kĩ năng chủ động, đấu trường 4 vùng đất. Chi tiết từng version xem [`VERSIONS.md`](VERSIONS.md).
+- **v1.0** (tag Git `v1.0`): bản ổn định đầu tiên — shop, pet, màn nâng cấp 1 hàng.
+
 ## Cửa hàng & Pet (bản nâng cấp)
 
 - **Điểm tích lũy:** điểm mỗi ván cộng thành tiền tệ vĩnh viễn khi ván kết thúc — vào **🛒 Cửa hàng** (từ menu hoặc màn hình kết thúc) để mua đồ.
