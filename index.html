@@ -260,6 +260,7 @@ import * as THREE from 'three';
    ============================================================ */
 
 const GAME_VERSION = 'v1.2';
+const VERSION_NAME = 'Velocity'; // tên mã kiểu model AI: 1 từ gợi đúng điểm nhấn của bản
 const ARENA_R = 38;
 const AUTOTEST = new URLSearchParams(location.search).has('autotest');
 const IS_TOUCH = new URLSearchParams(location.search).has('touch') || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -1882,7 +1883,7 @@ function animate() {
 if (!save.currentPet) { save.currentPet = rollPet(save.lastScore).id; persistSave(); }
 activePetId = save.currentPet;
 setPet(activePetId); computeStats(); applyGearVisuals(); refreshLoadout();
-$('version-line').textContent = 'Phiên bản ' + GAME_VERSION + ' · Tag Git: ' + GAME_VERSION + ' · Xem VERSIONS.md trong repo';
+$('version-line').textContent = 'Phiên bản ' + GAME_VERSION + ' "' + VERSION_NAME + '" · Tag Git: ' + GAME_VERSION + ' · Xem VERSIONS.md trong repo';
 applyQuality(qualityPref === 'auto' ? 'high' : qualityPref);
 animate();
 updateHUD();

@@ -3,7 +3,9 @@
 Mỗi phiên bản được gắn tag Git (`git tag`) để truy vết đúng code đã phát hành.
 Chơi bản mới nhất tại: https://vanhiennguyen-work.github.io/k-team-robot-arena/
 
-## v1.0 — "Shop & Pet" (23/10/2026) — tag: `v1.0`
+Mỗi phiên bản còn có **1 tên mã (codename)** đặt theo kiểu các AI đặt tên cho model của mình: 1 từ tiếng Anh gợi đúng điểm nhấn của bản đó (vd: `Forge`, `Tempest`, `Velocity`). Tên mã hiển thị trong game ở menu, cùng với số version và tag Git. Version mới chỉ cần đổi 2 hằng số `GAME_VERSION` + `VERSION_NAME` trong `index.html` và thêm 1 mục mới vào file này.
+
+## v1.0 — Forge · "Shop & Pet" (23/10/2026) — tag: `v1.0`
 
 Phiên bản ổn định đầu tiên, đóng gói toàn bộ tính năng đã hoàn thiện trong ngày 23/10:
 
@@ -13,14 +15,14 @@ Phiên bản ổn định đầu tiên, đóng gói toàn bộ tính năng đã 
 - **Pet:** 10 pet từ vũ trụ mascot (Mochi, RAI, Mèo Mun, 7 Robo K Team), quay cuối ván theo điểm ván trước; pet làm mồi nhử có máu riêng, bắn tia hỗ trợ, mỗi pet có chỉ số ATK / DEF / Sức lực riêng.
 - **Màn nâng cấp:** 3 thẻ 1 hàng ở phía trên màn hình, icon SVG theo nội dung, gợi ý theo bối cảnh (wave/BOSS/máu/súng/pet), khóa chọn 0,6s đầu chống chọn nhầm nút bắn.
 
-## v1.1 — "Âm thanh, vũ khí cao cấp, kĩ năng pet & địa hình mới" (25/10/2026) — tag: `v1.1`
+## v1.1 — Tempest · "Âm thanh, vũ khí cao cấp, kĩ năng pet & địa hình mới" (25/10/2026) — tag: `v1.1`
 
 - **Âm thanh:** bộ hiệu ứng âm thanh WebAudio cho từng hành động (bắn theo từng loại súng, trúng đòn, nhặt đồ, dash, Boss, kĩ năng pet, mua đồ, thắng wave, thua trận) + nút bật/tắt nhanh 🔊/🔇 ở góc trên màn hình game, nhớ lựa chọn qua các phiên chơi.
 - **Vũ khí cao cấp:** +4 súng mới — Laze Lượng Tử (đạn xuyên), Sấm Sét Lan (sét lan sang địch gần), Minigun Hạt (3 tia/tốc độ cao), Băng Đóng Lạnh (làm chậm địch) — cùng súng vẽ chi tiết hơn (ống ngắm, băng đạn, nòng phụ, lõi phát sáng).
 - **Kĩ năng pet:** mỗi pet có 1 kĩ năng chủ động riêng dùng trong trận (vd: RAI bắn Tia Trí Tuệ, Mèo Mun Vồ Nhanh, Robo Cứu Hỏa tung Vòng Lửa, Robo Siêu Anh Hùng Đấm Sóng Xung Kích) với hiệu ứng nhìn thấy được.
 - **Địa hình:** đấu trường chia 4 vùng đất (cỏ / cát / băng / núi lửa) với chướng ngại vật nhiều loại (đá, tinh thể, thùng, trụ năng lượng, cây), đài kỷ niệm K ở trung tâm và chi tiết trang trí.
 
-## v1.2 — "Ổn định & mượt mà" (25/10/2026) — tag: `v1.2`
+## v1.2 — Velocity · "Ổn định & mượt mà" (25/10/2026) — tag: `v1.2`
 
 Bản ổn định: không thêm tính năng chơi mới mà tập trung làm game đẹp hơn và hết giật trên máy yếu — toàn bộ thay đổi từ sau v1.1:
 
