@@ -201,6 +201,7 @@
   <button class="btn" id="btn-start">▶ Vào đấu trường</button>
   <button class="btn ghost" id="btn-autoaim-menu" style="margin-top:12px">🎯 Tâm bắn tự động: BẬT</button>
   <button class="btn ghost" id="btn-shop-menu" style="margin-top:10px">🛒 Cửa hàng trang bị</button>
+  <button class="btn ghost" id="btn-quality" style="margin-top:10px">⚙️ Chất lượng: Tự động</button>
   <div id="pet-line"></div>
   <div id="version-line" style="margin-top:6px;font-size:11.5px;color:#7d8fc9"></div>
   <div id="best-line"></div>
@@ -274,6 +275,44 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.3;
 
+// ---------- Chất lượng đồ họa: 3 nấc + tự động hạ nấc khi tụt FPS ----------
+// 'auto' (mặc định): bắt đầu ở Cao, tụt dưới 45 FPS thì tự hạ nấc, báo 1 dòng.
+// Chỉnh tay ở menu — lựa chọn lưu localStorage, không cần đổi antialias
+// (antialias gắn với WebGL context nên không đổi nóng được; DPR + bóng + viền
+// + đèn trang trí + hạt đã là phần nặng nhất trên máy yếu).
+let qualityPref = localStorage.getItem('kteam-quality') || 'auto';
+let qualityLevel = 'high';
+let particleScale = 1, particleCap = 260;
+const QUALITY_ORDER = ['high', 'medium', 'low'];
+const QUALITY_LABEL = { high: 'Cao', medium: 'Trung bình', low: 'Thấp' };
+const decorLights = []; // đèn trang trí (cột đèn, đài K) — tắt ở nấc Thấp
+let fpsFrames = 0, fpsLastT = performance.now();
+function outlineVisible(kind) { return qualityLevel === 'high' ? true : qualityLevel === 'medium' ? kind !== 'enemy' : false; }
+function applyQuality(level) {
+  qualityLevel = level;
+  renderer.setPixelRatio(level === 'high' ? Math.min(devicePixelRatio, 2) : level === 'medium' ? 1.5 : 1);
+  const shadowsOn = level !== 'low';
+  if (renderer.shadowMap.enabled !== shadowsOn) {
+    renderer.shadowMap.enabled = shadowsOn;
+    const seen = new Set(); // bật/tắt bóng cần báo vật liệu biên dịch lại
+    scene.traverse(o => { if (o.isMesh && o.material && !seen.has(o.material)) { seen.add(o.material); o.material.needsUpdate = true; } });
+  }
+  const size = level === 'high' ? 2048 : 1024;
+  if (shadowsOn && sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+  scene.traverse(o => { if (o.userData.isOutline) o.visible = outlineVisible(o.userData.outlineKind); });
+  for (const l of decorLights) l.visible = level !== 'low';
+  particleScale = level === 'high' ? 1 : level === 'medium' ? 0.7 : 0.4;
+  particleCap = level === 'high' ? 260 : level === 'medium' ? 160 : 90;
+  refreshQualityUI();
+}
+function setQualityPref(pref) {
+  qualityPref = pref; localStorage.setItem('kteam-quality', pref);
+  applyQuality(pref === 'auto' ? 'high' : pref);
+}
+function refreshQualityUI() {
+  const b = $('btn-quality');
+  if (b) b.textContent = '⚙️ Chất lượng: ' + (qualityPref === 'auto' ? 'Tự động (' + QUALITY_LABEL[qualityLevel] + ')' : QUALITY_LABEL[qualityPref]);
+}
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070a1c);
 scene.fog = new THREE.Fog(0x070a1c, 55, 130);
@@ -393,12 +432,13 @@ function toonify(group) {
   });
 }
 // Viền kiểu inverted-hull: bản sao phóng to vẽ mặt sau bằng màu tối (bỏ qua vật liệu phát sáng, thanh máu, sprite)
-function addOutline(group, s = 1.045) {
+function addOutline(group, s = 1.045, kind = 'enemy') {
   if (group.userData.outlined) return; group.userData.outlined = true;
   group.traverse(o => {
     if (!o.isMesh || o.userData.isOutline || !o.material || o.material.isMeshBasicMaterial) return;
     const ol = new THREE.Mesh(o.geometry, OUTLINE_MAT);
-    ol.scale.setScalar(s); ol.castShadow = false; ol.receiveShadow = false; ol.userData.isOutline = true;
+    ol.scale.setScalar(s); ol.castShadow = false; ol.receiveShadow = false;
+    ol.userData.isOutline = true; ol.userData.outlineKind = kind; ol.visible = outlineVisible(kind);
     o.add(ol);
   });
 }
@@ -413,9 +453,12 @@ const M = {
   glowCyan: new THREE.MeshBasicMaterial({ color: 0x37e0ff }),
   glowRed: new THREE.MeshBasicMaterial({ color: 0xff4757 }),
 };
+const geoCache = new Map();
 function roundedBoxGeo(w, h, d, r) {
+  const key = w + '|' + h + '|' + d;
+  const hit = geoCache.get(key); if (hit) return hit;
   r = Math.min(r, Math.min(w, h, d) * 0.28);
-  if (r <= 0.02) return new THREE.BoxGeometry(w, h, d);
+  if (r <= 0.02) { const g0 = new THREE.BoxGeometry(w, h, d); geoCache.set(key, g0); return g0; }
   const hw = w / 2 - r, hh = h / 2 - r, W = w / 2, H = h / 2;
   const sh = new THREE.Shape();
   sh.moveTo(-hw, -H); sh.lineTo(hw, -H); sh.quadraticCurveTo(W, -H, W, -hh);
@@ -424,6 +467,7 @@ function roundedBoxGeo(w, h, d, r) {
   sh.lineTo(-W, -hh); sh.quadraticCurveTo(-W, -H, -hw, -H);
   const g = new THREE.ExtrudeGeometry(sh, { depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 2, steps: 1 });
   g.translate(0, 0, -(d - 2 * r) / 2);
+  geoCache.set(key, g);
   return g;
 }
 function box(w, h, d, mat, x = 0, y = 0, z = 0, shadow = true) {
@@ -622,7 +666,7 @@ let decorCount = 0, dustPts = null;
     const x = Math.cos(a) * (ARENA_R + 1.6), z = Math.sin(a) * (ARENA_R + 1.6);
     const pole = cyl(0.16, 0.22, 7, M.gun, x, 3.5, z, 10); scene.add(pole);
     scene.add(sph(0.42, i % 2 ? M.glowCyan : M.glowYellow, x, 7.2, z));
-    const pl = new THREE.PointLight(i % 2 ? 0x37e0ff : 0xffc21c, 12, 20, 1.8); pl.position.set(x, 7.2, z); scene.add(pl);
+    const pl = new THREE.PointLight(i % 2 ? 0x37e0ff : 0xffc21c, 12, 20, 1.8); pl.position.set(x, 7.2, z); scene.add(pl); decorLights.push(pl);
   }
   // chướng ngại vật nhiều loại, gắn theo từng vùng đất
   const addObstacle = (type, x, z, s) => {
@@ -664,7 +708,7 @@ let decorCount = 0, dustPts = null;
     const pillar = box(1.7, 2.8, 1.7, new THREE.MeshStandardMaterial({ color: 0x1c2438, roughness: 0.4, metalness: 0.6 }), 0, 1.4, 0); scene.add(pillar);
     const kPlate = box(1.1, 1.1, 0.08, M.gold, 0, 1.7, 0.88); scene.add(kPlate);
     scene.add(sph(0.5, M.glowYellow, 0, 3.3, 0));
-    const pl = new THREE.PointLight(0xffc21c, 20, 18, 1.8); pl.position.set(0, 3.3, 0); scene.add(pl);
+    const pl = new THREE.PointLight(0xffc21c, 20, 18, 1.8); pl.position.set(0, 3.3, 0); scene.add(pl); decorLights.push(pl);
     obstacles.push({ x: 0, z: 0, hx: 1.4, hz: 1.4, h: 2.8 });
   }
   // trang trí nhỏ theo từng vùng (không va chạm)
@@ -756,7 +800,7 @@ function makeRubi() {
   gearG.add(...armorParts, ...bootsParts, scopePart, corePart, ...gloveParts);
   g.add(gearG);
   g.userData = { legL, legR, armL, armR, head, gunTip: tip, gearParts: { armor: armorParts, boots: bootsParts, scope: [scopePart], core: [corePart], gloves: gloveParts } };
-  toonify(g); addOutline(g);
+  toonify(g); addOutline(g, 1.045, 'player');
   return g;
 }
 function applyGearVisuals() {
@@ -826,24 +870,29 @@ function makeEnemyMesh(type) {
 // ---------- Particles ----------
 const particles = [];
 const particleGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+const particleMats = new Map(); // 1 vật liệu/màu thay vì 1 vật liệu/hạt (đỡ đổi state GPU)
 function burst(pos, color, n = 10, speed = 6, life = 0.55, size = 1) {
-  for (let i = 0; i < n; i++) {
-    if (particles.length > 260) break;
-    const m = new THREE.Mesh(particleGeo, new THREE.MeshBasicMaterial({ color, transparent: true }));
-    m.position.copy(pos); m.scale.setScalar(size * (0.6 + Math.random() * 0.9));
+  const count = Math.round(n * particleScale);
+  for (let i = 0; i < count; i++) {
+    if (particles.length > particleCap) break;
+    let mat = particleMats.get(color);
+    if (!mat) { mat = new THREE.MeshBasicMaterial({ color, transparent: true }); particleMats.set(color, mat); }
+    const m = new THREE.Mesh(particleGeo, mat);
+    m.position.copy(pos);
+    const s0 = size * (0.6 + Math.random() * 0.9); m.scale.setScalar(s0);
     scene.add(m);
-    particles.push({ m, vx: (Math.random() - 0.5) * speed * 2, vy: Math.random() * speed + 2, vz: (Math.random() - 0.5) * speed * 2, life, maxLife: life, spin: Math.random() * 9 });
+    particles.push({ m, size0: s0, vx: (Math.random() - 0.5) * speed * 2, vy: Math.random() * speed + 2, vz: (Math.random() - 0.5) * speed * 2, life, maxLife: life, spin: Math.random() * 9 });
   }
 }
 function updateParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i]; p.life -= dt;
-    if (p.life <= 0) { scene.remove(p.m); p.m.material.dispose(); particles.splice(i, 1); continue; }
+    if (p.life <= 0) { scene.remove(p.m); particles.splice(i, 1); continue; } // vật liệu dùng chung: không dispose
     p.vy -= 14 * dt;
     p.m.position.x += p.vx * dt; p.m.position.y += p.vy * dt; p.m.position.z += p.vz * dt;
     if (p.m.position.y < 0.1) { p.m.position.y = 0.1; p.vy *= -0.4; }
     p.m.rotation.x += p.spin * dt; p.m.rotation.y += p.spin * 0.7 * dt;
-    p.m.material.opacity = p.life / p.maxLife;
+    p.m.scale.setScalar(Math.max(0.01, p.size0 * (p.life / p.maxLife))); // co nhỏ dần thay cho mờ dần (vật liệu dùng chung không mờ riêng được)
   }
 }
 
@@ -959,7 +1008,7 @@ function equipViewModel() {
   const wasVisible = viewModel.visible;
   camera.remove(viewModel);
   viewModel = buildViewModel();
-  toonify(viewModel); addOutline(viewModel, 1.03);
+  toonify(viewModel); addOutline(viewModel, 1.03, 'gun');
   viewModel.visible = wasVisible;
   camera.add(viewModel);
 }
@@ -1240,7 +1289,7 @@ function setPet(id) {
   pet.mesh.add(bar); pet.barFg = fg;
   const label = nameSprite(pet.def.name, pet.def.colorCss); label.position.y = 2.38; pet.mesh.add(label);
   pet.mesh.position.set(player.mesh.position.x + 2.4, 0, player.mesh.position.z + 1.6);
-  toonify(pet.mesh); addOutline(pet.mesh);
+  toonify(pet.mesh); addOutline(pet.mesh, 1.045, 'pet');
   scene.add(pet.mesh);
 }
 function damagePet(n) {
@@ -1258,7 +1307,8 @@ function updatePet(dt) {
   if (!pet.mesh || !pet.def) return;
   const pm = pet.mesh, pp = player.mesh.position;
   pet.hitFlash = Math.max(0, pet.hitFlash - dt);
-  pm.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(pet.hitFlash > 0 ? 0x662222 : 0x000000); });
+  if (pet.hitFlash > 0) { if (!pet.emissiveHot) { pet.emissiveHot = true; pm.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(0x662222); }); } }
+  else if (pet.emissiveHot) { pet.emissiveHot = false; pm.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(0x000000); }); }
   if (pet.barFg) {
     pet.barFg.parent.quaternion.copy(camera.quaternion);
     pet.barFg.scale.x = Math.max(0, pet.hp / pet.maxHp);
@@ -1402,6 +1452,10 @@ function buyGear(id) {
 function openShop() { renderShop(); $('shop').classList.add('on'); }
 function closeShop() { $('shop').classList.remove('on'); }
 $('btn-shop-menu').addEventListener('click', openShop);
+$('btn-quality').addEventListener('click', () => {
+  const order = ['auto', 'high', 'medium', 'low'];
+  setQualityPref(order[(order.indexOf(qualityPref) + 1) % order.length]);
+});
 $('btn-mute').addEventListener('click', toggleMute);
 addEventListener('keydown', e => { if (e.key === 'm' || e.key === 'M') toggleMute(); });
 $('btn-shop-over').addEventListener('click', openShop);
@@ -1480,6 +1534,17 @@ const clock = new THREE.Clock();
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _dir = new THREE.Vector3(), _rawDir = new THREE.Vector3(), _v3 = new THREE.Vector3();
 function animate() {
   requestAnimationFrame(animate);
+  // đo FPS thật: dưới 45 FPS ở chế độ Tự động thì hạ 1 nấc (mỗi cửa sổ 2.5s, chỉ hạ không tự tăng để khỏi dao động)
+  fpsFrames++;
+  const nowMs = performance.now();
+  if (nowMs - fpsLastT >= 2500) {
+    const fps = fpsFrames * 1000 / (nowMs - fpsLastT);
+    fpsFrames = 0; fpsLastT = nowMs;
+    if (qualityPref === 'auto' && fps < 45) {
+      const idx = QUALITY_ORDER.indexOf(qualityLevel);
+      if (idx < QUALITY_ORDER.length - 1) { applyQuality(QUALITY_ORDER[idx + 1]); toast('⚡ Đã tự giảm chất lượng để giữ game mượt'); }
+    }
+  }
   const dt = Math.min(clock.getDelta(), 0.05);
   state.time += dt;
   const t = state.time;
@@ -1696,7 +1761,8 @@ function animate() {
       const dx = tp.x - p.x, dz = tp.z - p.z, dist = Math.hypot(dx, dz);
       e.mesh.rotation.y = Math.atan2(dx, dz);
       e.hitFlash = Math.max(0, e.hitFlash - dt);
-      e.mesh.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(e.hitFlash > 0 ? 0x772222 : 0x000000); });
+      if (e.hitFlash > 0) { if (!e.emissiveHot) { e.emissiveHot = true; e.mesh.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(0x772222); }); } }
+      else if (e.emissiveHot) { e.emissiveHot = false; e.mesh.traverse(o => { if (o.isMesh && o.material && o.material.emissive) o.material.emissive.setHex(0x000000); }); }
       // squash & stretch theo nhịp chạy + mắt mở to khi vừa trúng đòn
       const bob = Math.sin(t * 9 + e.wobble);
       e.mesh.scale.set(e.baseScale * (1 - 0.025 * bob), e.baseScale * (1 + 0.05 * bob), e.baseScale * (1 - 0.025 * bob));
@@ -1784,6 +1850,7 @@ if (!save.currentPet) { save.currentPet = rollPet(save.lastScore).id; persistSav
 activePetId = save.currentPet;
 setPet(activePetId); computeStats(); applyGearVisuals(); refreshLoadout();
 $('version-line').textContent = 'Phiên bản ' + GAME_VERSION + ' · Tag Git: ' + GAME_VERSION + ' · Xem VERSIONS.md trong repo';
+applyQuality(qualityPref === 'auto' ? 'high' : qualityPref);
 animate();
 updateHUD();
 
@@ -1813,7 +1880,7 @@ if (AUTOTEST) {
     }
   }, 500);
 }
-window.KTEAM = { scene, state, player, enemies, obstacles, bullets, spawnBullet, killEnemy, damageEnemy, get decorCount() { return decorCount; }, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }), get save() { return save; }, pet, PET_DEFS, WEAPONS, GEAR, buyWeapon, buyGear, equipWeapon, setPet, rollPet, computeStats, openShop, damagePet, offerUpgrades, recommendUpgrade };
+window.KTEAM = { scene, state, player, enemies, obstacles, bullets, spawnBullet, killEnemy, damageEnemy, applyQuality, setQualityPref, get qualityLevel() { return qualityLevel; }, get qualityPref() { return qualityPref; }, burst, get particleCount() { return particles.length; }, get shadowOn() { return renderer.shadowMap.enabled; }, get pixelRatio() { return renderer.getPixelRatio(); }, get shadowSize() { return sun.shadow.mapSize.x; }, get decorCount() { return decorCount; }, startGame, spawnEnemy, camera, getView: () => ({ yaw: camYaw, pitch: camPitch, fov: camera.fov }), get save() { return save; }, pet, PET_DEFS, WEAPONS, GEAR, buyWeapon, buyGear, equipWeapon, setPet, rollPet, computeStats, openShop, damagePet, offerUpgrades, recommendUpgrade };
 </script>
 </body>
 </html>
