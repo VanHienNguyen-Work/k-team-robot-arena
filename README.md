@@ -27,6 +27,17 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 
 > Thư viện Three.js (MIT) được đóng gói sẵn trong `lib/` — game chạy **offline 100%**, không phụ thuộc CDN.
 
+## 🏭 Game Factory — làm hàng trăm game từ một khuôn
+
+Toàn bộ cách làm game này đã đóng gói thành factory dùng lại cho mọi
+game sau: xem [`game-factory/`](game-factory/) — playbook đầy đủ,
+template chạy được ngay, script tạo game mới bằng 1 lệnh, smoke test
+chung và registry mọi game. Tạo game mới:
+
+```bash
+bash game-factory/scripts/new-game.sh <slug> "Tên Game" [Tên mã]
+```
+
 ## Phiên bản
 
 - **v1.3 "Echo" hiện tại** (tag Git `v1.3`): bản ổn định — hệ tên mã version + sửa câm tiếng trên iOS (mở khóa mọi cử chỉ, phiên playback qua mặt công tắc im lặng, nút Kiểm tra tiếng). Chi tiết từng version xem [`VERSIONS.md`](VERSIONS.md).
