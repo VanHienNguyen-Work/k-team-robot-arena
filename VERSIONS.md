@@ -19,3 +19,12 @@ Phiên bản ổn định đầu tiên, đóng gói toàn bộ tính năng đã 
 - **Vũ khí cao cấp:** +4 súng mới — Laze Lượng Tử (đạn xuyên), Sấm Sét Lan (sét lan sang địch gần), Minigun Hạt (3 tia/tốc độ cao), Băng Đóng Lạnh (làm chậm địch) — cùng súng vẽ chi tiết hơn (ống ngắm, băng đạn, nòng phụ, lõi phát sáng).
 - **Kĩ năng pet:** mỗi pet có 1 kĩ năng chủ động riêng dùng trong trận (vd: RAI bắn Tia Trí Tuệ, Mèo Mun Vồ Nhanh, Robo Cứu Hỏa tung Vòng Lửa, Robo Siêu Anh Hùng Đấm Sóng Xung Kích) với hiệu ứng nhìn thấy được.
 - **Địa hình:** đấu trường chia 4 vùng đất (cỏ / cát / băng / núi lửa) với chướng ngại vật nhiều loại (đá, tinh thể, thùng, trụ năng lượng, cây), đài kỷ niệm K ở trung tâm và chi tiết trang trí.
+
+## v1.2 — "Ổn định & mượt mà" (25/10/2026) — tag: `v1.2`
+
+Bản ổn định: không thêm tính năng chơi mới mà tập trung làm game đẹp hơn và hết giật trên máy yếu — toàn bộ thay đổi từ sau v1.1:
+
+- **Đồ họa toon:** nhân vật tô màu mảng hoạt hình 4 nấc + viền đen, thân có chi tiết panel/ốc vít/vết xước vẽ bằng code, hộp bo tròn góc, đèn môi trường làm mềm vùng tối — giữ nguyên phong cách sticker của Rubi, game vẫn chạy offline nhẹ.
+- **Nhân vật sống động hơn:** địch chạy nhún nhảy squash & stretch, mắt mở to khi trúng đòn, chết đổ ngửa rồi mới vỡ tung (pet không bắn vào xác), Rubi thở phập phồng ở menu, súng nghiêng khi dash.
+- **Chất lượng 3 nấc + tự động:** nút ⚙️ Chất lượng ở menu (Tự động / Cao / Trung bình / Thấp, nhớ lựa chọn); chế độ Tự động đo FPS mỗi 2,5s, dưới 45 FPS thì hạ nấc, dưới 25 FPS nhảy thẳng xuống Thấp. Nấc Thấp tắt bóng/viền/đèn trang trí và giảm hạt để cứu máy yếu.
+- **Hết đơ khi bắn liên thanh + đông địch + Boss:** bỏ đèn gắn theo từng viên đạn (từng là thủ phạm chính làm GPU sập khung hình), va chạm đạn đổi sang phép thử đoạn thẳng (không còn vòng lặp nặng thêm khi lag), HUD chỉ ghi DOM khi số đổi, tiếng nổ dùng chung 1 bộ nhớ âm thanh, trần 140 viên đạn. Đo stress giống hệt trước/sau: tốc độ game tăng ~2,4 lần, số đèn 35 → 14.
