@@ -30,3 +30,11 @@ Bản ổn định: không thêm tính năng chơi mới mà tập trung làm ga
 - **Nhân vật sống động hơn:** địch chạy nhún nhảy squash & stretch, mắt mở to khi trúng đòn, chết đổ ngửa rồi mới vỡ tung (pet không bắn vào xác), Rubi thở phập phồng ở menu, súng nghiêng khi dash.
 - **Chất lượng 3 nấc + tự động:** nút ⚙️ Chất lượng ở menu (Tự động / Cao / Trung bình / Thấp, nhớ lựa chọn); chế độ Tự động đo FPS mỗi 2,5s, dưới 45 FPS thì hạ nấc, dưới 25 FPS nhảy thẳng xuống Thấp. Nấc Thấp tắt bóng/viền/đèn trang trí và giảm hạt để cứu máy yếu.
 - **Hết đơ khi bắn liên thanh + đông địch + Boss:** bỏ đèn gắn theo từng viên đạn (từng là thủ phạm chính làm GPU sập khung hình), va chạm đạn đổi sang phép thử đoạn thẳng (không còn vòng lặp nặng thêm khi lag), HUD chỉ ghi DOM khi số đổi, tiếng nổ dùng chung 1 bộ nhớ âm thanh, trần 140 viên đạn. Đo stress giống hệt trước/sau: tốc độ game tăng ~2,4 lần, số đèn 35 → 14.
+
+## v1.3 — Echo · "Âm thanh trở lại" (25/10/2026) — tag: `v1.3`
+
+Bản ổn định: gom toàn bộ thay đổi từ sau v1.2 — hệ tên mã version và chuỗi sửa câm tiếng trên iOS:
+
+- **Tên mã version:** mỗi version có 1 tên mã kiểu model AI (v1.0 Forge, v1.1 Tempest, v1.2 Velocity, v1.3 Echo); tên hiển thị trong game ở menu cùng số version và tag Git; version mới chỉ cần đổi 2 hằng số `GAME_VERSION` + `VERSION_NAME`.
+- **Sửa câm tiếng trên iOS (2 lần):** (1) mở khóa âm thanh trên mọi cử chỉ (pointerdown/touchstart/keydown) kèm phát node câm trong cử chỉ — vì iOS chỉ cho AudioContext chạy khi mở khóa trong cử chỉ thật; (2) chuyển phiên âm thanh sang kênh playback (`navigator.audioSession.type = 'playback'`, iOS 17+) — vì WebAudio mặc định chạy kênh ambient nên công tắc im lặng bên hông iPhone giết tiếng hoàn toàn, còn resume() thì không qua mặt được công tắc.
+- **Chẩn đoán âm thanh:** nút "🔊 Kiểm tra tiếng" ở menu phát chuỗi tiếng to/dài + dòng trạng thái (state/muted/phiên) để biết dứt điểm còn câm vì đâu; vào trận mà đang tắt tiếng thì toast báo rõ để bấm nút 🔊 góc trên bật lại.

@@ -29,7 +29,8 @@ Mở `http://localhost:8080` và bấm **Vào đấu trường**.
 
 ## Phiên bản
 
-- **v1.2 "Velocity" hiện tại** (tag Git `v1.2`): bản ổn định — đồ họa toon + viền + animation sống động, hệ chất lượng 3 nấc tự hạ khi tụt FPS, hết đơ khi bắn liên thanh + đông địch + Boss. Chi tiết từng version xem [`VERSIONS.md`](VERSIONS.md).
+- **v1.3 "Echo" hiện tại** (tag Git `v1.3`): bản ổn định — hệ tên mã version + sửa câm tiếng trên iOS (mở khóa mọi cử chỉ, phiên playback qua mặt công tắc im lặng, nút Kiểm tra tiếng). Chi tiết từng version xem [`VERSIONS.md`](VERSIONS.md).
+- **v1.2 "Velocity"** (tag Git `v1.2`): bản ổn định — đồ họa toon + viền + animation sống động, hệ chất lượng 3 nấc tự hạ khi tụt FPS, hết đơ khi bắn liên thanh + đông địch + Boss. Chi tiết từng version xem [`VERSIONS.md`](VERSIONS.md).
 - **v1.1 "Tempest"** (tag Git `v1.1`): âm thanh phong phú + nút tắt tiếng góc trên, 9 vũ khí (thêm Laze xuyên, Sấm Sét lan, Minigun 3 tia, Băng làm chậm), mỗi pet 1 kĩ năng chủ động, đấu trường 4 vùng đất.
 - **v1.0 "Forge"** (tag Git `v1.0`): bản ổn định đầu tiên — shop, pet, màn nâng cấp 1 hàng.
 
