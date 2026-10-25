@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Runner 3D Vô Tận</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #14102e; font-family: system-ui, sans-serif; color: #eef2ff; }
+  canvas { display: block; }
+  #menu { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(5, 8, 20, .88); z-index: 10; text-align: center; padding: 16px; }
+  #menu h1 { margin: 0; font-size: 42px; }
+  #menu p { margin: 0 0 8px; color: #9fb0e0; max-width: 520px; }
+  .btn { padding: 12px 26px; font-size: 16px; border: 0; border-radius: 12px; background: #e8212f; color: #fff; cursor: pointer; }
+  .btn.ghost { background: #232c4d; }
+  #version-line { margin-top: 12px; font-size: 12.5px; color: #7d8fc9; }
+  #audio-status { font-size: 11.5px; color: #7d8fc9; min-height: 16px; }
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; display: none; }
+  #hud .top { position: absolute; top: 12px; left: 14px; font-size: 17px; font-weight: 700; text-shadow: 0 1px 4px #000; }
+  #hud .sub { position: absolute; top: 40px; left: 14px; font-size: 14px; color: #ffd23f; text-shadow: 0 1px 4px #000; }
+  #hud .btns { position: absolute; top: 12px; right: 12px; pointer-events: auto; display: flex; gap: 8px; }
+  #hud .btns button { width: 44px; height: 44px; font-size: 20px; border: 0; border-radius: 10px; background: rgba(20, 26, 50, .85); color: #fff; cursor: pointer; }
+  #toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(10, 14, 30, .92); padding: 10px 18px; border-radius: 10px; font-size: 14px; z-index: 20; display: none; }
+</style>
+</head>
+<body>
+<div id="menu">
+  <h1>🏃 Runner 3D Vô Tận</h1>
+  <p>Robot đỏ chạy mãi không dừng! Chuyển làn né chướng ngại, nhảy qua rào thấp, trượt qua thanh cao, nhặt xu vàng. Tốc độ tăng dần — chạy được bao xa?</p>
+  <p>⌨️ ← → chuyển làn · ↑ nhảy · ↓ trượt · 📱 vuốt trái/phải/lên/xuống</p>
+  <button class="btn" id="btn-start">▶ Bắt đầu chạy</button>
+  <button class="btn ghost" id="btn-quality">⚙️ Chất lượng: Tự động</button>
+  <button class="btn ghost" id="btn-soundtest">🔊 Kiểm tra tiếng</button>
+  <div id="audio-status"></div>
+  <div id="version-line"></div>
+</div>
+<div id="hud">
+  <div class="top" id="hud-top">Điểm 0</div>
+  <div class="sub" id="hud-sub">🪙 0 · Tốc độ 0</div>
+  <div class="btns"><button id="btn-mute">🔊</button><button id="btn-pause">⏸</button></div>
+</div>
+<div id="toast"></div>
+<script type="importmap">{"imports": {"three": "./lib/three.module.min.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+// ============ 1. VERSION ============
+const GAME_VERSION = 'v0.1';
+const VERSION_NAME = 'Sprint';
+const SAVE_PREFIX = 'runner-3d-vo-tan';
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// ============ 2. AUDIO (nguyên khối factory — đừng rút gọn) ============
+function setPlaybackSession() { try { const s = navigator.audioSession; if (s) s.type = 'playback'; } catch (e) { } }
+setPlaybackSession();
+let AC = null, audioUnlocked = false;
+let muted = false; try { muted = localStorage.getItem(SAVE_PREFIX + '-muted') === '1'; } catch (e) { }
+function audio() { setPlaybackSession(); if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (AC && AC.state === 'suspended') AC.resume(); if (AC && AC.state === 'running') audioUnlocked = true; return AC; }
+function beep(freq, dur, type, vol, slide) { const ac = audio(); if (!ac || muted) return; try { const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime; o.type = type || 'square'; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t + dur); g.gain.setValueAtTime(vol || 0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur); } catch (e) { } }
+let sharedNoise = null;
+function noiseBurst(dur, vol) { const ac = audio(); if (!ac || muted) return; try { if (!sharedNoise) { const b = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; sharedNoise = b; } const src = ac.createBufferSource(), g = ac.createGain(), t = ac.currentTime; src.buffer = sharedNoise; g.gain.setValueAtTime(vol || 0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); src.connect(g).connect(ac.destination); src.start(t); src.stop(t + dur); } catch (e) { } }
+const SFX = {
+  jump() { beep(300, 0.18, 'square', 0.12, 700); },
+  coin() { beep(1100, 0.08, 'square', 0.12); setTimeout(() => beep(1500, 0.12, 'square', 0.12), 60); },
+  crash() { noiseBurst(0.4, 0.3); beep(300, 0.5, 'sawtooth', 0.2, 60); },
+  speed() { beep(520, 0.12, 'square', 0.12); setTimeout(() => beep(780, 0.15, 'square', 0.12), 100); },
+  click() { beep(900, 0.05, 'square', 0.08); },
+};
+function refreshAudioStatus(extra = '') { const el = $('audio-status'); if (!el) return; const sess = (navigator.audioSession && navigator.audioSession.type) || 'không hỗ trợ (iOS cũ)'; el.textContent = 'Âm thanh: ' + (AC ? AC.state : 'chưa mở') + (muted ? ' · ĐANG TẮT TIẾNG' : ' · đang bật') + ' · phiên: ' + sess + extra; }
+function refreshMuteUI() { const b = $('btn-mute'); if (b) b.textContent = muted ? '🔇' : '🔊'; refreshAudioStatus(); }
+function toggleMute() { muted = !muted; try { localStorage.setItem(SAVE_PREFIX + '-muted', muted ? '1' : '0'); } catch (e) { } refreshMuteUI(); SFX.click(); }
+function unlockAudio() { setPlaybackSession(); const ac = audio(); if (!ac) return; if (ac.state === 'suspended') ac.resume(); if (!audioUnlocked) { try { const o = ac.createOscillator(), g = ac.createGain(); g.gain.value = 0; o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.05); } catch (e) { } } if (ac.state === 'running') audioUnlocked = true; refreshAudioStatus(); }
+['pointerdown', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, unlockAudio, { passive: true }));
+function soundTest() { unlockAudio(); if (muted) { refreshAudioStatus(' — bấm nút 🔊 góc trên để bật tiếng'); toast('🔇 Đang tắt tiếng — bấm nút 🔊 góc phải trên để bật lại'); return; } beep(880, 0.4, 'square', 0.25); setTimeout(() => beep(1320, 0.4, 'square', 0.25), 300); setTimeout(() => noiseBurst(0.3, 0.25), 650); refreshAudioStatus(' — vừa phát tiếng kiểm tra'); }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); }
+
+// ============ 3. QUALITY (factory) ============
+let qualityPref = 'auto'; try { qualityPref = localStorage.getItem(SAVE_PREFIX + '-quality') || 'auto'; } catch (e) { }
+let qualityLevel = 'high';
+const QUALITY_LABEL = { auto: 'Tự động', high: 'Cao', medium: 'Trung bình', low: 'Thấp' };
+function setQualityPref(pref) { qualityPref = pref; try { localStorage.setItem(SAVE_PREFIX + '-quality', pref); } catch (e) { } refreshQualityBtn(); if (pref !== 'auto') applyQuality(pref); }
+function refreshQualityBtn() { $('btn-quality').textContent = '⚙️ Chất lượng: ' + QUALITY_LABEL[qualityPref] + (qualityPref === 'auto' ? ' (' + ({ high: 'Cao', medium: 'Trung bình', low: 'Thấp' })[qualityLevel] + ')' : ''); }
+function applyQuality(level) { qualityLevel = level; renderer.setPixelRatio(level === 'high' ? Math.min(devicePixelRatio, 2) : level === 'medium' ? 1.5 : 1); renderer.shadowMap.enabled = level !== 'low'; renderer.shadowMap.needsUpdate = true; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); refreshQualityBtn(); }
+
+// ============ 4. WORLD — đường chạy cuộn về phía người chơi ============
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight); renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x14102e); scene.fog = new THREE.Fog(0x14102e, 30, 95);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 200);
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x1a2038, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(10, 25, 8); sun.castShadow = true; scene.add(sun);
+const track = new THREE.Mesh(new THREE.PlaneGeometry(12, 220), new THREE.MeshStandardMaterial({ color: 0x2b2f3a }));
+track.rotation.x = -Math.PI / 2; track.position.z = -80; track.receiveShadow = true; scene.add(track);
+const grassL = new THREE.Mesh(new THREE.PlaneGeometry(60, 220), new THREE.MeshStandardMaterial({ color: 0x1f5c33 })); grassL.rotation.x = -Math.PI / 2; grassL.position.set(-36, -0.05, -80); scene.add(grassL);
+const grassR = grassL.clone(); grassR.position.x = 36; scene.add(grassR);
+const dashMat = new THREE.MeshBasicMaterial({ color: 0x59d6ff });
+const dashes = [];
+for (let i = 0; i < 40; i++) { const d = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 2.2), dashMat); d.position.set(i % 2 === 0 ? -2.2 : 2.2, 0.02, -90 + i * 5); scene.add(d); dashes.push(d); }
+const decorMat = new THREE.MeshStandardMaterial({ color: 0x2a7a3d });
+const decors = [];
+for (let i = 0; i < 14; i++) { const t = new THREE.Mesh(new THREE.ConeGeometry(1.2, 3.2, 7), decorMat); const side = i % 2 === 0 ? -1 : 1; t.position.set(side * (8 + Math.random() * 8), 1.6, -90 + i * 14); scene.add(t); decors.push(t); }
+
+// ============ 5. PLAYER — robot đỏ, 3 làn, nhảy/trượt ============
+const LANES = [-2.2, 0, 2.2];
+const robot = new THREE.Group();
+const redMat = new THREE.MeshStandardMaterial({ color: 0xe8212f });
+const darkMat = new THREE.MeshStandardMaterial({ color: 0x1c2233 });
+const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 0.55), redMat); body.position.y = 1.05; body.castShadow = true;
+const head = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.6, 0.6), redMat); head.position.y = 1.85; head.castShadow = true;
+const eye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), eyeMat); eye.position.set(0, 1.9, -0.32);
+const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5), darkMat); ant.position.y = 2.35;
+const legL = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.55, 0.32), darkMat); legL.position.set(-0.24, 0.28, 0);
+const legR = legL.clone(); legR.position.x = 0.24;
+robot.add(body, head, eye, ant, legL, legR); scene.add(robot);
+const player = { lane: 1, x: 0, y: 0, vy: 0, grounded: true, slideT: 0 };
+const state = { playing: false, paused: false, crashing: false, score: 0, coins: 0, distance: 0, best: 0, speed: 13, spawnT: 0, time: 0, speedMark: 0 };
+try { state.best = +(localStorage.getItem(SAVE_PREFIX + '-best') || 0); } catch (e) { }
+function moveLane(dir) { if (!state.playing || state.paused || state.crashing) return; const nl = clamp(player.lane + dir, 0, 2); if (nl !== player.lane) { player.lane = nl; SFX.click(); } }
+function jump() { if (!state.playing || state.paused || state.crashing || !player.grounded) return; player.vy = 9.5; player.grounded = false; player.slideT = 0; SFX.jump(); }
+function slide() { if (!state.playing || state.paused || state.crashing || !player.grounded) return; player.slideT = 0.6; SFX.click(); }
+addEventListener('keydown', e => {
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+  if (e.code === 'KeyM') toggleMute(); if (e.code === 'KeyP') togglePause();
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') moveLane(-1);
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') moveLane(1);
+  if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') jump();
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') slide();
+});
+let tsX = 0, tsY = 0;
+addEventListener('touchstart', e => { tsX = e.changedTouches[0].clientX; tsY = e.changedTouches[0].clientY; }, { passive: true });
+addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tsX, dy = e.changedTouches[0].clientY - tsY; if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 24) moveLane(dx > 0 ? 1 : -1); else if (dy < -24) jump(); else if (dy > 24) slide(); }, { passive: true });
+
+// ============ 6. OBSTACLES + COINS ============
+const obstacles = [], coins = [];
+const hurdleMat = new THREE.MeshStandardMaterial({ color: 0xff8c1a });
+const overMat = new THREE.MeshStandardMaterial({ color: 0x9b5cff });
+const blockMat = new THREE.MeshStandardMaterial({ color: 0xe8212f });
+const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xaa7700 });
+function spawnObstacle(lane, type) {
+  const g = new THREE.Group();
+  if (type === 'hurdle') { const b = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.7, 0.4), hurdleMat); b.position.y = 0.35; b.castShadow = true; g.add(b); }
+  if (type === 'overhead') { const bar = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 0.4), overMat); bar.position.y = 1.8; bar.castShadow = true; const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.4, 0.25), overMat); p1.position.set(-0.9, 0.7, 0); const p2 = p1.clone(); p2.position.x = 0.9; g.add(bar, p1, p2); }
+  if (type === 'block') { const b = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.9, 0.8), blockMat); b.position.y = 0.95; b.castShadow = true; g.add(b); }
+  g.position.set(LANES[lane], 0, -75); scene.add(g); obstacles.push({ g, lane, type });
+}
+function spawnRow() {
+  const lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
+  const nObs = Math.random() < 0.6 ? 2 : 1;
+  const used = [];
+  for (let i = 0; i < nObs; i++) {
+    const lane = lanes[i]; used.push(lane);
+    const type = Math.random() < 0.4 ? 'block' : Math.random() < 0.5 ? 'hurdle' : 'overhead';
+    spawnObstacle(lane, type);
+  }
+  if (Math.random() < 0.55) {
+    const free = [0, 1, 2].find(l => !used.includes(l));
+    const lane = free !== undefined ? free : lanes[2];
+    for (let i = 0; i < 5; i++) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.35, 14, 14), coinMat); c.position.set(LANES[lane], 1.0, -75 - i * 2.5); scene.add(c); coins.push({ m: c, lane }); }
+  }
+}
+function hitObstacle(o) {
+  if (Math.abs(o.g.position.z) > 0.95 || Math.abs(LANES[o.lane] - player.x) > 1.05) return false;
+  if (o.type === 'block') return true;
+  if (o.type === 'hurdle') return player.y < 0.8;
+  if (o.type === 'overhead') return player.slideT <= 0;
+  return false;
+}
+
+// ============ 7. FLOW ============
+function startGame() { unlockAudio(); if (muted) toast('🔇 Đang tắt tiếng — bấm nút 🔊 góc phải trên để bật lại'); Object.assign(player, { lane: 1, x: 0, y: 0, vy: 0, grounded: true, slideT: 0 }); Object.assign(state, { playing: true, paused: false, crashing: false, score: 0, coins: 0, distance: 0, speed: 13, spawnT: 0.8, time: 0, speedMark: 0 }); obstacles.splice(0).forEach(o => scene.remove(o.g)); coins.splice(0).forEach(c => scene.remove(c.m)); robot.rotation.set(0, 0, 0); robot.scale.set(1, 1, 1); $('menu').style.display = 'none'; $('hud').style.display = 'block'; }
+function crash() { if (state.crashing) return; state.crashing = true; SFX.crash(); setTimeout(() => { state.playing = false; if (state.score > state.best) { state.best = state.score; try { localStorage.setItem(SAVE_PREFIX + '-best', state.best); } catch (e) { } } $('hud').style.display = 'none'; $('menu').style.display = 'flex'; $('menu').querySelector('p').textContent = 'Vấp ngã rồi! Điểm ' + state.score + ' · Xa ' + Math.floor(state.distance) + 'm · 🪙 ' + state.coins + ' · Kỷ lục ' + state.best + ' — bấm Bắt đầu chạy lại.'; $('version-line').textContent = 'Phiên bản ' + GAME_VERSION + ' "' + VERSION_NAME + '" · Kỷ lục: ' + state.best; }, 650); }
+function togglePause() { if (!state.playing || state.crashing) return; state.paused = !state.paused; $('btn-pause').textContent = state.paused ? '▶' : '⏸'; }
+$('btn-start').addEventListener('click', startGame);
+$('btn-pause').addEventListener('click', togglePause);
+$('btn-mute').addEventListener('click', toggleMute);
+$('btn-quality').addEventListener('click', () => setQualityPref(qualityPref === 'auto' ? 'high' : qualityPref === 'high' ? 'medium' : qualityPref === 'medium' ? 'low' : 'auto'));
+$('btn-soundtest').addEventListener('click', soundTest);
+$('version-line').textContent = 'Phiên bản ' + GAME_VERSION + ' "' + VERSION_NAME + '" · Kỷ lục: ' + state.best;
+applyQuality('high'); refreshQualityBtn(); refreshMuteUI(); refreshAudioStatus();
+
+// ============ 8. AUTOPILOT (chỉ khi ?autotest=1: tự né để test sống được) ============
+const autopilot = new URLSearchParams(location.search).get('autotest') === '1';
+function autoDrive() {
+  if (!state.playing || state.crashing) return;
+  const near = obstacles.filter(o => o.lane === player.lane && o.g.position.z > -14 && o.g.position.z < 0).sort((a, b) => b.g.position.z - a.g.position.z)[0];
+  if (!near) return;
+  if (near.type === 'block') { const free = [0, 1, 2].find(l => l !== player.lane && !obstacles.some(o => o.lane === l && o.g.position.z > -14 && o.g.position.z < 2)); if (free !== undefined) player.lane = free; }
+  else if (near.type === 'hurdle' && player.grounded) jump();
+  else if (near.type === 'overhead' && player.slideT <= 0) slide();
+}
+
+// ============ 9. LOOP ============
+const clock = new THREE.Clock(); let fpsAcc = 0, fpsN = 0, fpsT = 0; const hudCache = {};
+function setHud(id, val) { if (hudCache[id] !== val) { hudCache[id] = val; $(id).textContent = val; } }
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  fpsAcc += dt; fpsN++; fpsT += dt;
+  if (fpsT >= 2.5) { const fps = fpsN / fpsAcc; if (qualityPref === 'auto' && fps < 45 && qualityLevel !== 'low') { applyQuality(qualityLevel === 'high' ? 'medium' : 'low'); toast('⚡ Đã tự giảm chất lượng để giữ game mượt'); } fpsAcc = 0; fpsN = 0; fpsT = 0; }
+  if (state.playing && !state.paused) {
+    state.time += dt;
+    state.speed = Math.min(32, 13 + state.time * 0.35);
+    if (state.speed - state.speedMark >= 5) { state.speedMark = state.speed; SFX.speed(); }
+    state.distance += state.speed * dt;
+    state.score = Math.floor(state.distance) + state.coins * 25;
+    if (!player.grounded) { player.vy -= 26 * dt; player.y += player.vy * dt; if (player.y <= 0) { player.y = 0; player.vy = 0; player.grounded = true; } }
+    player.slideT = Math.max(0, player.slideT - dt);
+    player.x += (LANES[player.lane] - player.x) * Math.min(1, dt * 12);
+    const run = state.time * 16;
+    legL.rotation.x = player.grounded ? Math.sin(run) * 0.7 : -0.4; legR.rotation.x = player.grounded ? -Math.sin(run) * 0.7 : 0.3;
+    robot.position.set(player.x, player.y + (player.grounded && player.slideT <= 0 ? Math.abs(Math.sin(run)) * 0.06 : 0), 0);
+    robot.scale.y = player.slideT > 0 ? 0.55 : 1;
+    if (state.crashing) robot.rotation.x -= dt * 2.5;
+    for (const d of dashes) { d.position.z += state.speed * dt; if (d.position.z > 15) d.position.z -= 100; }
+    for (const t of decors) { t.position.z += state.speed * dt; if (t.position.z > 15) { t.position.z -= 100; t.position.x = (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 8); } }
+    state.spawnT -= dt;
+    if (state.spawnT <= 0 && !state.crashing) { spawnRow(); state.spawnT = Math.max(0.55, 1.15 - state.speed * 0.012); }
+    for (let i = obstacles.length - 1; i >= 0; i--) { const o = obstacles[i]; o.g.position.z += state.speed * dt; if (!state.crashing && hitObstacle(o)) crash(); if (o.g.position.z > 12) { scene.remove(o.g); obstacles.splice(i, 1); } }
+    for (let i = coins.length - 1; i >= 0; i--) { const c = coins[i]; c.m.position.z += state.speed * dt; c.m.rotation.y += dt * 4; if (Math.abs(c.m.position.z) < 1.0 && Math.abs(LANES[c.lane] - player.x) < 1.0 && player.y < 1.6) { scene.remove(c.m); coins.splice(i, 1); state.coins++; SFX.coin(); } else if (c.m.position.z > 12) { scene.remove(c.m); coins.splice(i, 1); } }
+    if (autopilot) autoDrive();
+    setHud('hud-top', 'Điểm ' + state.score + ' · ' + Math.floor(state.distance) + 'm');
+    setHud('hud-sub', '🪙 ' + state.coins + ' · Tốc độ ' + Math.round(state.speed * 3.6) + ' km/h');
+  }
+  camera.position.set(player.x * 0.55, 3.4, 6.8);
+  camera.lookAt(player.x * 0.55, 1.2, -10);
+  renderer.render(scene, camera);
+}
+animate();
+
+// ============ 10. DEBUG HOOKS ============
+window.KTEAM = { scene, state, player, obstacles, coins, get speed() { return state.speed; }, startGame, jump, moveLane, slide, applyQuality, setQualityPref, get qualityLevel() { return qualityLevel; }, get qualityPref() { return qualityPref; }, audio, unlockAudio, SFX, get audioState() { return AC ? AC.state : 'none'; }, get muted() { return muted; } };
+if (autopilot) { setTimeout(() => { startGame(); setTimeout(() => { window.__AUTOTEST__ = { score: state.score, distance: Math.floor(state.distance), coins: state.coins, playing: state.playing }; document.title = 'AUTOTEST_DONE'; }, 15000); }, 500); }
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+</script>
+</body>
+</html>

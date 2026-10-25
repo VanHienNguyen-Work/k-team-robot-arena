@@ -7,4 +7,5 @@ mới và từ chối slug trùng.
 | # | Slug | Tên game | Version hiện tại | Trạng thái | Thư mục |
 |---|---|---|---|---|---|
 | 001 | `k-team-robot-arena` | K Team: Robot Arena 3D | v1.3 "Echo" | ✅ Live | (repo root — game gốc, factory rút ra từ đây) |
+| 002 | `runner-3d-vo-tan` | Runner 3D Vô Tận | v0.1 "Sprint" | ✅ Chơi được | games/runner-3d-vo-tan/ |
 <!-- NEW-GAMES -->
