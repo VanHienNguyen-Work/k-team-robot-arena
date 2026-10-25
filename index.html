@@ -352,19 +352,26 @@ function beep(freq, dur, type = 'square', vol = 0.12, slide = 0) {
   g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
   o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
 }
+let noiseBuf = null; // 1 buffer nhiễu dùng chung — trước: mỗi tiếng nổ cấp phát buffer mới
 function noiseBurst(dur = 0.25, vol = 0.22) {
   if (muted) return;
   const ac = audio(); if (!ac) return;
-  const len = Math.floor(ac.sampleRate * dur), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
-  const src = ac.createBufferSource(); src.buffer = buf;
-  const g = ac.createGain(); g.gain.value = vol;
+  if (!noiseBuf || noiseBuf.sampleRate !== ac.sampleRate) {
+    noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const src = ac.createBufferSource(); src.buffer = noiseBuf;
+  const g = ac.createGain(), t = ac.currentTime;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); // tắt dần bằng gain thay vì nướng vào buffer
   const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
-  src.connect(f).connect(g).connect(ac.destination); src.start();
+  src.connect(f).connect(g).connect(ac.destination); src.start(t); src.stop(t + dur);
 }
 const SFX = {
   click() { beep(880, 0.05, 'sine', 0.08); },
   shoot(w) {
+    const nowS = performance.now();
+    if (nowS - (SFX._lastShoot || 0) < 25) return; SFX._lastShoot = nowS;
     const k = (w && w.sfx) || 'blaster';
     if (k === 'laser') beep(1500 + Math.random() * 200, 0.12, 'sawtooth', 0.06, -1200);
     else if (k === 'rail') { noiseBurst(0.15, 0.2); beep(140, 0.25, 'sawtooth', 0.14, -80); }
@@ -900,18 +907,22 @@ function updateParticles(dt) {
 const bullets = [], enemyBullets = [];
 const bulletGeo = new THREE.SphereGeometry(0.13, 10, 8);
 const eBulletGeo = new THREE.SphereGeometry(0.24, 12, 10);
+const bulletMats = new Map(); // 1 vật liệu/màu đạn (trước: mỗi viên 1 vật liệu + 1 PointLight)
+function bulletMat(color) { let m = bulletMats.get(color); if (!m) { m = new THREE.MeshBasicMaterial({ color }); bulletMats.set(color, m); } return m; }
 function spawnBullet(origin, dir, dmg, weapon, colorOverride) {
+  if (bullets.length >= 140) return; // trần an toàn — tốc độ bắn thường không chạm tới
   const color = colorOverride || (weapon ? weapon.color : 0xffd94d);
-  const ownMat = !(color === 0xffd94d && !weapon);
-  const m = new THREE.Mesh(bulletGeo, ownMat ? new THREE.MeshBasicMaterial({ color }) : M.glowYellow);
+  const m = new THREE.Mesh(bulletGeo, bulletMat(color));
   m.scale.setScalar(weapon ? weapon.size : 1);
   m.position.copy(origin); scene.add(m);
-  const glow = new THREE.PointLight(0xffc21c, 5, 7, 2); m.add(glow);
+  // KHÔNG gắn PointLight theo viên đạn nữa: forward renderer tính mọi đèn trên
+  // mọi điểm ảnh — 50 viên/giây lúc bắn liên thanh từng làm GPU máy yếu sập khung hình.
+  // Đạn vốn đã là vật liệu Basic tự phát sáng nên nhìn không khác.
   const bs = weapon ? (weapon.speed || 46) : 46;
-  bullets.push({ m, vx: dir.x * bs, vy: dir.y * bs, vz: dir.z * bs, life: 1.4, dmg, aoe: weapon ? weapon.aoe : 0, pierce: weapon ? (weapon.pierce || 0) : 0, pierced: 0, hitSet: new Set(), chain: weapon ? (weapon.chain || 0) : 0, slow: weapon ? (weapon.slow || 0) : 0, ownMat });
+  bullets.push({ m, vx: dir.x * bs, vy: dir.y * bs, vz: dir.z * bs, life: 1.4, dmg, aoe: weapon ? weapon.aoe : 0, pierce: weapon ? (weapon.pierce || 0) : 0, pierced: 0, hitSet: new Set(), chain: weapon ? (weapon.chain || 0) : 0, slow: weapon ? (weapon.slow || 0) : 0 });
 }
 function spawnEnemyBullet(origin, dir, dmg) {
-  const m = new THREE.Mesh(eBulletGeo, new THREE.MeshBasicMaterial({ color: 0xff2d78 }));
+  const m = new THREE.Mesh(eBulletGeo, bulletMat(0xff2d78));
   m.position.copy(origin); scene.add(m);
   enemyBullets.push({ m, vx: dir.x * 19, vy: dir.y * 19, vz: dir.z * 19, life: 4, dmg });
 }
@@ -1238,7 +1249,7 @@ function damagePlayer(n) {
 function damageEnemy(e, dmg, hitPos, silent) {
   if (e.dying) return;
   e.hp -= dmg; e.hitFlash = 0.12;
-  if (!silent) { burst(hitPos, 0xffd94d, 4, 4, 0.3, 0.7); const hm = $('hitmarker'); hm.classList.add('on'); clearTimeout(hm._t); hm._t = setTimeout(() => hm.classList.remove('on'), 45); SFX.hit(); }
+  if (!silent) { burst(hitPos, 0xffd94d, 4, 4, 0.3, 0.7); const nowM = performance.now(); if (nowM - (damageEnemy._hm || 0) > 60) { damageEnemy._hm = nowM; const hm = $('hitmarker'); hm.classList.add('on'); clearTimeout(hm._t); hm._t = setTimeout(() => hm.classList.remove('on'), 45); } SFX.hit(); }
   if (e.hp <= 0) killEnemy(e);
 }
 function killEnemy(e) {
@@ -1462,16 +1473,22 @@ $('btn-shop-over').addEventListener('click', openShop);
 $('shop-close').addEventListener('click', closeShop);
 
 // ---------- HUD / flow ----------
-function updateHUD() {
-  $('hp-fill').style.width = Math.max(0, player.hp / player.maxHp * 100) + '%';
-  $('hp-text').textContent = `${Math.ceil(player.hp)}/${player.maxHp}`;
-  $('score-text').textContent = state.score.toLocaleString('vi-VN');
-  $('best-text').textContent = 'Kỷ lục: ' + Math.max(state.best, state.score).toLocaleString('vi-VN');
-  $('wave-text').textContent = 'WAVE ' + Math.max(1, state.wave);
-  $('left-text').textContent = 'Địch còn: ' + (enemies.length + state.spawnQueue.length);
+function updateHUD() { // chỉ ghi DOM khi giá trị đổi — trước đây ghi đủ 8 ô mỗi frame suốt trận boss
+  const hpPct = Math.max(0, player.hp / player.maxHp * 100);
+  if (updateHUD._hp !== hpPct) { updateHUD._hp = hpPct; $('hp-fill').style.width = hpPct + '%'; }
+  const hpT = Math.ceil(player.hp) + '/' + player.maxHp;
+  if (updateHUD._hpT !== hpT) { updateHUD._hpT = hpT; $('hp-text').textContent = hpT; }
+  const sc = state.score.toLocaleString('vi-VN');
+  if (updateHUD._sc !== sc) { updateHUD._sc = sc; $('score-text').textContent = sc; }
+  const bs = 'Kỷ lục: ' + Math.max(state.best, state.score).toLocaleString('vi-VN');
+  if (updateHUD._bs !== bs) { updateHUD._bs = bs; $('best-text').textContent = bs; }
+  const wv = 'WAVE ' + Math.max(1, state.wave);
+  if (updateHUD._wv !== wv) { updateHUD._wv = wv; $('wave-text').textContent = wv; }
+  const lf = 'Địch còn: ' + (enemies.length + state.spawnQueue.length);
+  if (updateHUD._lf !== lf) { updateHUD._lf = lf; $('left-text').textContent = lf; }
   const c = $('combo');
-  if (state.combo >= 2) { c.textContent = state.multiplier > 1 ? `x${state.multiplier} COMBO (${state.combo}) 🔥` : `${state.combo} COMBO 🔥`; c.classList.add('on'); } else c.classList.remove('on');
-  if (bossRef) $('boss-fill').style.width = Math.max(0, bossRef.hp / bossRef.maxHp * 100) + '%';
+  if (state.combo >= 2) { const ct = state.multiplier > 1 ? `x${state.multiplier} COMBO (${state.combo}) 🔥` : `${state.combo} COMBO 🔥`; if (updateHUD._ct !== ct) { updateHUD._ct = ct; c.textContent = ct; } c.classList.add('on'); } else { c.classList.remove('on'); updateHUD._ct = ''; }
+  if (bossRef) { const bp = Math.max(0, bossRef.hp / bossRef.maxHp * 100); if (updateHUD._bp !== bp) { updateHUD._bp = bp; $('boss-fill').style.width = bp + '%'; } }
 }
 function startGame() {
   audio();
@@ -1542,7 +1559,8 @@ function animate() {
     fpsFrames = 0; fpsLastT = nowMs;
     if (qualityPref === 'auto' && fps < 45) {
       const idx = QUALITY_ORDER.indexOf(qualityLevel);
-      if (idx < QUALITY_ORDER.length - 1) { applyQuality(QUALITY_ORDER[idx + 1]); toast('⚡ Đã tự giảm chất lượng để giữ game mượt'); }
+      const next = fps < 25 ? 'low' : QUALITY_ORDER[Math.min(idx + 1, QUALITY_ORDER.length - 1)];
+      if (next !== qualityLevel) { applyQuality(next); toast('⚡ Đã tự giảm chất lượng để giữ game mượt'); }
     }
   }
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1693,38 +1711,53 @@ function animate() {
       SFX.shoot(wpn);
     }
 
-    // --- đạn player (di chuyển theo bước nhỏ 0.8 đv để đạn nhanh không xuyên qua địch) ---
+    // --- đạn player (va chạm đoạn thẳng: khoảng cách từ tâm địch tới ĐOẠN đạn bay
+    // trong frame — chính xác, không xuyên hụt, và chi phí KHÔNG tăng khi lag.
+    // Bản bước nhỏ cũ: dt càng lớn (đang lag) thì càng nhiều bước → càng lag thêm.)
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i]; b.life -= dt;
       let dead = b.life <= 0;
       let hitE = null;
-      const steps = Math.max(1, Math.ceil(Math.hypot(b.vx, b.vy, b.vz) * dt / 0.8));
-      for (let si = 0; si < steps && !dead; si++) {
-      b.m.position.x += b.vx * dt / steps; b.m.position.y += b.vy * dt / steps; b.m.position.z += b.vz * dt / steps;
-      if (b.m.position.y < 0 || Math.hypot(b.m.position.x, b.m.position.z) > ARENA_R + 2) { dead = true; break; }
-      for (const e of enemies) {
-        if (b.hitSet.has(e)) continue;
-        _v.copy(e.mesh.position); _v.y = b.m.position.y;
-        if (Math.hypot(b.m.position.x - _v.x, b.m.position.z - _v.z) < e.radius + 0.25 && b.m.position.y > -0.2 && b.m.position.y < 3.4 * e.mesh.scale.y) {
+      const px = b.m.position.x, py = b.m.position.y, pz = b.m.position.z;
+      b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt;
+      const nx = b.m.position.x, ny = b.m.position.y, nz = b.m.position.z;
+      const R2 = (ARENA_R + 2) * (ARENA_R + 2);
+      if (ny < 0 || nx * nx + nz * nz > R2) dead = true;
+      if (!dead) {
+        const dx = nx - px, dz = nz - pz, len2 = dx * dx + dz * dz;
+        let bestT = 2, bestE = null; // địch gần nhất dọc đoạn bay (đúng thứ tự như bước nhỏ)
+        for (const e of enemies) {
+          if (b.hitSet.has(e)) continue;
+          const ex = e.mesh.position.x, ez = e.mesh.position.z;
+          let tt = 0;
+          if (len2 > 0) { tt = ((ex - px) * dx + (ez - pz) * dz) / len2; tt = tt < 0 ? 0 : tt > 1 ? 1 : tt; }
+          const cx = px + dx * tt, cz = pz + dz * tt;
+          const ddx = ex - cx, ddz = ez - cz, rr = e.radius + 0.25;
+          if (ddx * ddx + ddz * ddz >= rr * rr) continue;
+          const cy = py + (ny - py) * tt;
+          if (cy < -0.2 || cy >= 3.4 * e.mesh.scale.y) continue;
+          if (tt < bestT) { bestT = tt; bestE = e; }
+        }
+        if (bestE) {
+          const e = bestE;
           damageEnemy(e, b.dmg, b.m.position.clone()); hitE = e; b.hitSet.add(e);
           if (b.slow) { e.slowUntil = state.time + b.slow; SFX.slowHit(); }
           if (b.chain) {
             let cnt = 0;
             for (const e2 of [...enemies]) {
               if (cnt >= b.chain || e2 === e || b.hitSet.has(e2)) continue;
-              if (e2.mesh.position.distanceTo(e.mesh.position) < 6 + e2.radius) { damageEnemy(e2, b.dmg * 0.5, e2.mesh.position.clone()); b.hitSet.add(e2); burst(e2.mesh.position.clone().setY(1.2), 0x7dd3fc, 8, 5, 0.4); cnt++; }
+              const ddx = e2.mesh.position.x - e.mesh.position.x, ddz = e2.mesh.position.z - e.mesh.position.z, ddy = e2.mesh.position.y - e.mesh.position.y, rr = 6 + e2.radius;
+              if (ddx * ddx + ddz * ddz + ddy * ddy < rr * rr) { damageEnemy(e2, b.dmg * 0.5, e2.mesh.position.clone()); b.hitSet.add(e2); burst(e2.mesh.position.clone().setY(1.2), 0x7dd3fc, 8, 5, 0.4); cnt++; }
             }
             if (cnt) SFX.chainZap();
           }
           if (b.pierce && b.pierced < b.pierce) { b.pierced++; }
           else { dead = true; }
-          break;
         }
       }
-      }
       if (dead) {
-        if (b.aoe) for (const e2 of [...enemies]) { if (e2 !== hitE && Math.hypot(e2.mesh.position.x - b.m.position.x, e2.mesh.position.z - b.m.position.z) < b.aoe + e2.radius) damageEnemy(e2, b.dmg * 0.6, b.m.position.clone()); }
-        scene.remove(b.m); if (b.ownMat) b.m.material.dispose(); bullets.splice(i, 1);
+        if (b.aoe) for (const e2 of [...enemies]) { if (e2 !== hitE) { const ddx = e2.mesh.position.x - nx, ddz = e2.mesh.position.z - nz, rr = b.aoe + e2.radius; if (ddx * ddx + ddz * ddz < rr * rr) damageEnemy(e2, b.dmg * 0.6, b.m.position.clone()); } }
+        scene.remove(b.m); bullets.splice(i, 1);
       }
     }
     // --- đạn địch (boss) ---
